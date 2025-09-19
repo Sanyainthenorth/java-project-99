@@ -2,12 +2,11 @@ FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
-# Копируем Gradle wrapper и конфиги
+# Копируем только нужные для сборки файлы
 COPY gradlew .
 COPY gradle ./gradle
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
-COPY gradle.properties .
 
 # Копируем исходный код
 COPY src ./src
@@ -15,8 +14,8 @@ COPY src ./src
 # Даем права на выполнение gradlew
 RUN chmod +x gradlew
 
-# Собираем приложение (пропускаем тесты - они в CI)
-RUN ./gradlew build -x test
+# Скачиваем зависимости и собираем приложение (кешируем зависимости)
+RUN ./gradlew build -x test --no-daemon
 
 # Открываем порт (Render использует порт 10000)
 EXPOSE 10000
