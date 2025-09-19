@@ -3,7 +3,6 @@ plugins {
 	id("org.springframework.boot") version "3.5.6"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("org.sonarqube") version "4.4.1.3373"
-	id("checkstyle")
 	id("jacoco")
 
 }
@@ -39,11 +38,6 @@ sonarqube {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
-}
-
-checkstyle {
-	toolVersion = "10.12.1"
-	configFile = file("config/checkstyle/checkstyle.xml")
 }
 
 tasks.jacocoTestReport {
