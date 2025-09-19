@@ -9,7 +9,7 @@
 
 ## Spring Boot Application
 
-**Deployed application**: [https://java-project-99.onrender.com/welcome](https://java-project-99.onrender.com/welcome)
+**Deployed application**: [https://java-project-99-70n8.onrender.com](https://java-project-99-70n8.onrender.com)
 
 ### 🚀 Features
 - Spring Boot 3.5.6
