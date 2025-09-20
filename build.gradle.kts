@@ -4,6 +4,7 @@ plugins {
 	id("io.spring.dependency-management") version "1.1.7"
 	id("org.sonarqube") version "4.4.1.3373"
 	id("jacoco")
+	id("io.freefair.lombok") version "8.13.1"
 
 }
 
@@ -25,6 +26,14 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+
+	// H2 Database (для разработки)
+	runtimeOnly("com.h2database:h2")
+
+	// PostgreSQL (для продакшена)
+	runtimeOnly("org.postgresql:postgresql")
 }
 sonarqube {
 	properties {
