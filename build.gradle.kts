@@ -28,6 +28,18 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+	// Spring Security Crypto для хеширования паролей
+	implementation("org.springframework.security:spring-security-crypto")
+
+	// MapStruct для автоматического маппинга
+	implementation("org.mapstruct:mapstruct:1.5.5.Final")
+	annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+
+	// BCrypt для хеширования
+	implementation("org.springframework.security:spring-security-core")
+
+	// Для тестов
+	testImplementation("org.springframework.security:spring-security-test")
 
 	// H2 Database (для разработки)
 	runtimeOnly("com.h2database:h2")
