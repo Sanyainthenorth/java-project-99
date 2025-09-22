@@ -25,8 +25,10 @@ public class DataInitializer implements ApplicationRunner {
             User admin = new User();
             admin.setEmail(email);
             admin.setPassword(passwordEncoder.encode("qwerty"));
+            admin.setRole(User.Role.ADMIN);
             admin.setFirstName("Admin");
             admin.setLastName("System");
+
 
             admin.setCreatedAt(LocalDateTime.now());
             admin.setUpdatedAt(LocalDateTime.now());

@@ -176,5 +176,20 @@ class UserIntegrationTest {
                             .content(objectMapper.writeValueAsString(userCreateDTO)))
                .andExpect(status().isBadRequest());
     }
+    @Test
+    void shouldReturnUnauthorizedForInvalidCredentials() throws Exception {
+        String authRequest = """
+        {
+            "username": "test@example.com",
+            "password": "wrongpassword"
+        }
+        """;
+
+        mockMvc.perform(post("/api/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(authRequest))
+               .andExpect(status().isUnauthorized())
+               .andExpect(content().string("")); // Пустое тело
+    }
 }
 
