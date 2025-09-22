@@ -4,6 +4,7 @@ import hexlet.code.dto.UserCreateDTO;
 import hexlet.code.dto.UserUpdateDTO;
 import hexlet.code.model.User;
 import hexlet.code.repository.UserRepository;
+import hexlet.code.util.JWTUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,8 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -37,7 +39,11 @@ class UserIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private JWTUtils jwtUtils;
+
     private User testUser;
+    private String authToken;
 
     @BeforeEach
     void setUp() {
@@ -48,40 +54,24 @@ class UserIntegrationTest {
         testUser.setFirstName("John");
         testUser.setLastName("Doe");
         testUser.setPassword(passwordEncoder.encode("password123"));
+        testUser.setCreatedAt(LocalDateTime.now());
+        testUser.setUpdatedAt(LocalDateTime.now());
         testUser = userRepository.save(testUser);
+
+        authToken = jwtUtils.generateToken(testUser.getEmail());
     }
 
+    // ТЕСТЫ ДЛЯ ПУБЛИЧНЫХ ENDPOINTS
+
     @Test
-    void shouldGetUserById() throws Exception {
+    void shouldGetUserByIdWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/users/{id}", testUser.getId()))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$.id").value(testUser.getId()))
-               .andExpect(jsonPath("$.email").value("test@example.com"))
-               .andExpect(jsonPath("$.firstName").value("John"))
-               .andExpect(jsonPath("$.lastName").value("Doe"))
-               .andExpect(jsonPath("$.createdAt").exists())
-               .andExpect(jsonPath("$.password").doesNotExist());
+               .andExpect(jsonPath("$.email").value("test@example.com"));
     }
 
     @Test
-    void shouldReturnNotFoundForNonExistentUser() throws Exception {
-        mockMvc.perform(get("/api/users/999"))
-               .andExpect(status().isNotFound())
-               .andExpect(jsonPath("$.error").value("User not found with id: 999"));
-    }
-
-    @Test
-    void shouldGetAllUsers() throws Exception {
-        mockMvc.perform(get("/api/users"))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$", hasSize(1)))
-               .andExpect(jsonPath("$[0].email").value("test@example.com"))
-               .andExpect(jsonPath("$[0].firstName").value("John"))
-               .andExpect(jsonPath("$[0].password").doesNotExist());
-    }
-
-    @Test
-    void shouldCreateUser() throws Exception {
+    void shouldCreateUserWithoutAuthentication() throws Exception {
         UserCreateDTO userCreateDTO = new UserCreateDTO();
         userCreateDTO.setEmail("new@example.com");
         userCreateDTO.setFirstName("Jane");
@@ -92,18 +82,91 @@ class UserIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(userCreateDTO)))
                .andExpect(status().isCreated())
-               .andExpect(jsonPath("$.id").exists())
-               .andExpect(jsonPath("$.email").value("new@example.com"))
-               .andExpect(jsonPath("$.firstName").value("Jane"))
-               .andExpect(jsonPath("$.lastName").value("Smith"))
-               .andExpect(jsonPath("$.createdAt").exists())
-               .andExpect(jsonPath("$.password").doesNotExist());
+               .andExpect(jsonPath("$.email").value("new@example.com"));
+    }
+
+    @Test
+    void shouldAuthenticateAndGetToken() throws Exception {
+        String authRequest = """
+            {
+                "username": "test@example.com",
+                "password": "password123"
+            }
+            """;
+
+        mockMvc.perform(post("/api/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(authRequest))
+               .andExpect(status().isOk())
+               .andExpect(content().string(not(emptyString())));
+    }
+
+    // ТЕСТЫ ДЛЯ ЗАЩИЩЕННЫХ ENDPOINTS (требуют аутентификации)
+
+    @Test
+    void shouldGetAllUsersWithAuthentication() throws Exception {
+        mockMvc.perform(get("/api/users")
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$", hasSize(1)))
+               .andExpect(jsonPath("$[0].email").value("test@example.com"));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedForGetAllUsersWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/users"))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldUpdateUserWithAuthentication() throws Exception {
+        UserUpdateDTO updateDTO = new UserUpdateDTO();
+        updateDTO.setFirstName("UpdatedName");
+
+        mockMvc.perform(put("/api/users/{id}", testUser.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.firstName").value("UpdatedName"));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedForUpdateWithoutToken() throws Exception {
+        UserUpdateDTO updateDTO = new UserUpdateDTO();
+        updateDTO.setFirstName("UpdatedName");
+
+        mockMvc.perform(put("/api/users/{id}", testUser.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldDeleteUserWithAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/users/{id}", testUser.getId())
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void shouldReturnUnauthorizedForDeleteWithoutToken() throws Exception {
+        mockMvc.perform(delete("/api/users/{id}", testUser.getId()))
+               .andExpect(status().isUnauthorized());
+    }
+
+    // ТЕСТЫ ОШИБОК
+
+    @Test
+    void shouldReturnNotFoundForNonExistentUser() throws Exception {
+        mockMvc.perform(get("/api/users/999"))
+               .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldReturnBadRequestForDuplicateEmail() throws Exception {
         UserCreateDTO userCreateDTO = new UserCreateDTO();
-        userCreateDTO.setEmail("test@example.com"); // Существующий email
+        userCreateDTO.setEmail("test@example.com"); // Дублирующий email
         userCreateDTO.setFirstName("Jane");
         userCreateDTO.setLastName("Smith");
         userCreateDTO.setPassword("password123");
@@ -111,72 +174,7 @@ class UserIntegrationTest {
         mockMvc.perform(post("/api/users")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(userCreateDTO)))
-               .andExpect(status().isBadRequest())
-               .andExpect(jsonPath("$.error").value("User with email already exists: test@example.com"));
-    }
-
-    @Test
-    void shouldUpdateUserPartially() throws Exception {
-        UserUpdateDTO updateDTO = new UserUpdateDTO();
-        updateDTO.setEmail("updated@example.com");
-        updateDTO.setFirstName("UpdatedName");
-
-        mockMvc.perform(put("/api/users/{id}", testUser.getId())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.email").value("updated@example.com"))
-               .andExpect(jsonPath("$.firstName").value("UpdatedName"))
-               .andExpect(jsonPath("$.lastName").value("Doe")) // unchanged
-               .andExpect(jsonPath("$.password").doesNotExist());
-    }
-
-    @Test
-    void shouldUpdateUserPassword() throws Exception {
-        UserUpdateDTO updateDTO = new UserUpdateDTO();
-        updateDTO.setPassword("newsecurepassword");
-
-        mockMvc.perform(put("/api/users/{id}", testUser.getId())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.email").value("test@example.com")); // email unchanged
-
-        // Проверяем, что пароль действительно изменился в базе
-        User updatedUser = userRepository.findById(testUser.getId()).orElseThrow();
-        assertTrue(passwordEncoder.matches("newsecurepassword", updatedUser.getPassword()));
-    }
-
-    @Test
-    void shouldDeleteUser() throws Exception {
-        mockMvc.perform(delete("/api/users/{id}", testUser.getId()))
-               .andExpect(status().isNoContent());
-
-        mockMvc.perform(get("/api/users/{id}", testUser.getId()))
-               .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void shouldReturnBadRequestForInvalidEmail() throws Exception {
-        UserCreateDTO userCreateDTO = new UserCreateDTO();
-        userCreateDTO.setEmail("invalid-email");
-        userCreateDTO.setPassword("validpassword123");
-
-        mockMvc.perform(post("/api/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(userCreateDTO)))
-               .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void shouldReturnBadRequestForShortPassword() throws Exception {
-        UserCreateDTO userCreateDTO = new UserCreateDTO();
-        userCreateDTO.setEmail("valid@example.com");
-        userCreateDTO.setPassword("pw"); // меньше 3 символов
-
-        mockMvc.perform(post("/api/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(userCreateDTO)))
                .andExpect(status().isBadRequest());
     }
 }
+

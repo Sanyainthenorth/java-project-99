@@ -8,6 +8,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
@@ -25,6 +27,9 @@ public class DataInitializer implements ApplicationRunner {
             admin.setPassword(passwordEncoder.encode("qwerty"));
             admin.setFirstName("Admin");
             admin.setLastName("System");
+
+            admin.setCreatedAt(LocalDateTime.now());
+            admin.setUpdatedAt(LocalDateTime.now());
 
             userRepository.save(admin);
             System.out.println("Admin user created: " + email);

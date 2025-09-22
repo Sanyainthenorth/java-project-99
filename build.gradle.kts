@@ -28,6 +28,9 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springframework.boot:spring-boot-starter-security")
+	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+	implementation("com.nimbusds:nimbus-jose-jwt:9.31")
 	// Spring Security Crypto для хеширования паролей
 	implementation("org.springframework.security:spring-security-crypto")
 
