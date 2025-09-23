@@ -7,7 +7,11 @@ import hexlet.code.service.UserService;
 import hexlet.code.util.UserUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,9 +34,14 @@ public class UserController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public List<UserDTO> getAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        List<UserDTO> users = userService.getAllUsers();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("X-Total-Count", String.valueOf(users.size()));
+        headers.add("Access-Control-Expose-Headers", "X-Total-Count");
+
+        return new ResponseEntity<>(users, headers, HttpStatus.OK);
     }
 
     @PostMapping
