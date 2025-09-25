@@ -35,14 +35,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Разрешаем доступ к статическим ресурсам фронтенда
                 .requestMatchers("/", "/index.html", "/assets/**", "/static/**", "/favicon.ico").permitAll()
-                // Публичные endpoints
-                .requestMatchers("/api/login").permitAll()
-                // POST /api/users - регистрация (публичный)
-                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
-                // GET /api/users/{id} - просмотр пользователя (публичный)
-                .requestMatchers(HttpMethod.GET, "/api/users/*").permitAll()
-                // Остальные endpoints требуют аутентификации
-                .requestMatchers(HttpMethod.GET, "/api/users").authenticated()
+                .requestMatchers("/api/login").permitAll() // аутентификация
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // регистрация
+
+                // Защищенные endpoints
+                .requestMatchers(HttpMethod.GET, "/api/users").authenticated() // список пользователей
+                .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated() // просмотр конкретного пользователя
                 .requestMatchers(HttpMethod.PUT, "/api/users/*").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/users/*").authenticated()
                 .anyRequest().authenticated()

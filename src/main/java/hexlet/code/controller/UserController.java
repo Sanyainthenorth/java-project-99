@@ -7,8 +7,6 @@ import hexlet.code.service.UserService;
 import hexlet.code.util.UserUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,24 +23,24 @@ public class UserController {
     private final UserService userService;
     private final UserUtils userUtils;
 
-    @PreAuthorize("isAuthenticated()")
+    // Просмотр пользователя - с проверкой прав
+    @PreAuthorize("hasRole('ADMIN') or @userUtils.getCurrentUser().id == #id")
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public UserDTO getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    // Список пользователей - только для админа
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         List<UserDTO> users = userService.getAllUsers();
-
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-Total-Count", String.valueOf(users.size()));
-        headers.add("Access-Control-Expose-Headers", "X-Total-Count");
-
         return new ResponseEntity<>(users, headers, HttpStatus.OK);
     }
+
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

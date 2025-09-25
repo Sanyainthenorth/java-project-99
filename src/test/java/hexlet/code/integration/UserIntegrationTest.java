@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -59,15 +60,6 @@ class UserIntegrationTest {
         testUser = userRepository.save(testUser);
 
         authToken = jwtUtils.generateToken(testUser.getEmail());
-    }
-
-    // ТЕСТЫ ДЛЯ ПУБЛИЧНЫХ ENDPOINTS
-
-    @Test
-    void shouldGetUserByIdWithoutAuthentication() throws Exception {
-        mockMvc.perform(get("/api/users/{id}", testUser.getId()))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.email").value("test@example.com"));
     }
 
     @Test
@@ -155,13 +147,6 @@ class UserIntegrationTest {
                .andExpect(status().isUnauthorized());
     }
 
-    // ТЕСТЫ ОШИБОК
-
-    @Test
-    void shouldReturnNotFoundForNonExistentUser() throws Exception {
-        mockMvc.perform(get("/api/users/999"))
-               .andExpect(status().isNotFound());
-    }
 
     @Test
     void shouldReturnBadRequestForDuplicateEmail() throws Exception {
@@ -190,6 +175,49 @@ class UserIntegrationTest {
                             .content(authRequest))
                .andExpect(status().isUnauthorized())
                .andExpect(content().string("")); // Пустое тело
+    }
+    @Test
+    void shouldGetUserByIdWithAuthentication() throws Exception {
+        // Используем тестового пользователя вместо администратора
+        String token = authenticateUser("test@example.com", "password123");
+
+        mockMvc.perform(get("/api/users/{id}", testUser.getId())
+                            .header("Authorization", "Bearer " + token))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.email").value("test@example.com"));
+    }
+
+    @Test
+    void shouldReturnNotFoundForNonExistentUserWithAuthentication() throws Exception {
+        String token = authenticateUser("test@example.com", "password123");
+
+        mockMvc.perform(get("/api/users/999")
+                            .header("Authorization", "Bearer " + token))
+               .andExpect(status().isNotFound());
+    }
+
+    // Вспомогательный метод для аутентификации
+    private String authenticateUser(String email, String password) throws Exception {
+        String authRequest = String.format("{\"username\": \"%s\", \"password\": \"%s\"}", email, password);
+
+        MvcResult result = mockMvc.perform(post("/api/login")
+                                               .contentType(MediaType.APPLICATION_JSON)
+                                               .content(authRequest))
+                                  .andExpect(status().isOk())
+                                  .andReturn();
+
+        return result.getResponse().getContentAsString();
+    }
+    @Test
+    void shouldReturnUnauthorizedForGetUserByIdWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/users/{id}", testUser.getId()))
+               .andExpect(status().isUnauthorized()); // Ожидаем 401, а не 200
+    }
+
+    @Test
+    void shouldReturnUnauthorizedForNonExistentUserWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/users/999"))
+               .andExpect(status().isUnauthorized()); // Ожидаем 401, а не 404
     }
 }
 
