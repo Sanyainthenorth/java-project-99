@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated() // просмотр конкретного пользователя
                 .requestMatchers(HttpMethod.PUT, "/api/users/*").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/users/*").authenticated()
+                .requestMatchers("/api/task_statuses/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
