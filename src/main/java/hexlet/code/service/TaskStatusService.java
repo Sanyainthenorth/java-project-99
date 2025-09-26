@@ -6,20 +6,22 @@ import hexlet.code.dto.TaskStatusDTO;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskStatusMapper;
 import hexlet.code.model.TaskStatus;
+import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class TaskStatusService {
 
-    @Autowired
-    private TaskStatusRepository taskStatusRepository;
 
-    @Autowired
+    private TaskStatusRepository taskStatusRepository;
     private TaskStatusMapper taskStatusMapper;
+    private final TaskRepository taskRepository;
 
     public List<TaskStatusDTO> getAll() {
         var taskStatuses = taskStatusRepository.findAll();
@@ -50,7 +52,17 @@ public class TaskStatusService {
     }
 
     public void delete(Long id) {
-        taskStatusRepository.deleteById(id);
+        TaskStatus taskStatus = taskStatusRepository.findById(id)
+                                                    .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with id: " + id));
+
+        // Проверяем, есть ли задачи с этим статусом
+        if (taskRepository.existsByTaskStatusId(id)) {
+            throw new IllegalStateException(
+                "Cannot delete task status with id " + id + " because there are tasks with this status. " +
+                    "Please update or delete the tasks first.");
+        }
+
+        taskStatusRepository.delete(taskStatus);
     }
 
     public TaskStatus getReferenceById(Long id) {

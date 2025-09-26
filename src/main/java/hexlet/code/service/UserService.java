@@ -7,6 +7,7 @@ import hexlet.code.exception.DuplicateEmailException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.UserMapper;
 import hexlet.code.model.User;
+import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TaskRepository taskRepository;
     private final UserMapper userMapper;
 
     public List<UserDTO> getAllUsers() {
@@ -80,9 +82,16 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+        User user = userRepository.findById(id)
+                                  .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        // Проверяем, есть ли задачи у этого пользователя
+        if (taskRepository.existsByAssigneeId(id)) {
+            throw new IllegalStateException(
+                "Cannot delete user with id " + id + " because they have assigned tasks. " +
+                    "Please reassign or delete the tasks first.");
         }
-        userRepository.deleteById(id);
+
+        userRepository.delete(user);
     }
 }
