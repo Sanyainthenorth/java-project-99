@@ -2,6 +2,8 @@ package hexlet.code.integration;
 
 
 import hexlet.code.dto.TaskCreateDTO;
+import hexlet.code.dto.TaskStatusCreateDTO;
+import hexlet.code.dto.TaskStatusUpdateDTO;
 import hexlet.code.dto.TaskUpdateDTO;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
@@ -22,7 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -255,7 +259,7 @@ class TaskIntegrationTest {
                             .content(objectMapper.writeValueAsString(updateDTO)))
                .andExpect(status().isNotFound());
     }
-    
+
 
     private User createTestUser(String email, String firstName, String lastName) {
         User user = new User();
@@ -292,4 +296,173 @@ class TaskIntegrationTest {
         task.setCreatedAt(LocalDate.now());
         return taskRepository.save(task);
     }
+    @Test
+    void shouldRequireAuthenticationForGetAllStatuses() throws Exception {
+        mockMvc.perform(get("/api/task_statuses"))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRequireAuthenticationForGetStatusById() throws Exception {
+        mockMvc.perform(get("/api/task_statuses/{id}", testStatus.getId()))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRequireAuthenticationForCreateStatus() throws Exception {
+        TaskStatusCreateDTO createDTO = new TaskStatusCreateDTO();
+        createDTO.setName("New Status");
+        createDTO.setSlug("new_status");
+
+        mockMvc.perform(post("/api/task_statuses")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(createDTO)))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRequireAuthenticationForUpdateStatus() throws Exception {
+        TaskStatusUpdateDTO updateDTO = new TaskStatusUpdateDTO();
+        updateDTO.setName("Updated Status");
+
+        mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRequireAuthenticationForDeleteStatus() throws Exception {
+        mockMvc.perform(delete("/api/task_statuses/{id}", testStatus.getId()))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldGetAllStatusesWithAuthentication() throws Exception {
+        TaskStatus anotherStatus = new TaskStatus();
+        anotherStatus.setName("Another Status");
+        anotherStatus.setSlug("another_status");
+        anotherStatus.setCreatedAt(LocalDateTime.now());
+        taskStatusRepository.save(anotherStatus);
+
+        mockMvc.perform(get("/api/task_statuses")
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$", hasSize(2)))
+               .andExpect(jsonPath("$[0].name").value(testStatus.getName()))
+               .andExpect(jsonPath("$[0].slug").value(testStatus.getSlug()))
+               .andExpect(jsonPath("$[1].name").value(anotherStatus.getName()))
+               .andExpect(jsonPath("$[1].slug").value(anotherStatus.getSlug()));
+    }
+
+    @Test
+    void shouldGetStatusByIdWithAuthentication() throws Exception {
+        mockMvc.perform(get("/api/task_statuses/{id}", testStatus.getId())
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.id").value(testStatus.getId()))
+               .andExpect(jsonPath("$.name").value(testStatus.getName()))
+               .andExpect(jsonPath("$.slug").value(testStatus.getSlug()))
+               .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    void shouldCreateStatusWithAuthentication() throws Exception {
+        TaskStatusCreateDTO createDTO = new TaskStatusCreateDTO();
+        createDTO.setName("New Task Status");
+        createDTO.setSlug("new_task_status");
+
+        mockMvc.perform(post("/api/task_statuses")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(createDTO)))
+               .andExpect(status().isCreated())
+               .andExpect(jsonPath("$.id").exists())
+               .andExpect(jsonPath("$.name").value("New Task Status"))
+               .andExpect(jsonPath("$.slug").value("new_task_status"))
+               .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    void shouldUpdateStatusWithAuthentication() throws Exception {
+        TaskStatusUpdateDTO updateDTO = new TaskStatusUpdateDTO();
+        updateDTO.setName("Updated Status Name");
+        updateDTO.setSlug("updated_slug");
+
+        mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.id").value(testStatus.getId()))
+               .andExpect(jsonPath("$.name").value("Updated Status Name"))
+               .andExpect(jsonPath("$.slug").value("updated_slug"))
+               .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    void shouldUpdateStatusPartiallyWithAuthentication() throws Exception {
+        // Обновляем только имя
+        TaskStatusUpdateDTO updateDTO = new TaskStatusUpdateDTO();
+        updateDTO.setName("Only Name Updated");
+
+        mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.id").value(testStatus.getId()))
+               .andExpect(jsonPath("$.name").value("Only Name Updated"))
+               .andExpect(jsonPath("$.slug").value(testStatus.getSlug()));
+
+        // Обновляем только slug
+        TaskStatusUpdateDTO updateDTO2 = new TaskStatusUpdateDTO();
+        updateDTO2.setSlug("only_slug_updated");
+
+        mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO2)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.name").value("Only Name Updated"))
+               .andExpect(jsonPath("$.slug").value("only_slug_updated"));
+    }
+
+    @Test
+    void shouldDeleteStatusWithAuthentication() throws Exception {
+        // Удалите все задачи с этим статусом, если они есть (или не создавайте в setUp)
+        taskRepository.deleteAll();
+
+        mockMvc.perform(delete("/api/task_statuses/{id}", testStatus.getId())
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/task_statuses/{id}", testStatus.getId())
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidCreateData() throws Exception {
+        TaskStatusCreateDTO invalidDTO = new TaskStatusCreateDTO();
+        invalidDTO.setName("");
+        invalidDTO.setSlug("valid_slug");
+
+        mockMvc.perform(post("/api/task_statuses")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidDTO)))
+               .andExpect(status().isBadRequest());
+
+        TaskStatusCreateDTO invalidDTO2 = new TaskStatusCreateDTO();
+        invalidDTO2.setName("Valid Name");
+        invalidDTO2.setSlug("");
+
+        mockMvc.perform(post("/api/task_statuses")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidDTO2)))
+               .andExpect(status().isBadRequest());
+    }
+
 }

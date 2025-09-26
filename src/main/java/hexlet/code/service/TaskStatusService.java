@@ -19,8 +19,8 @@ import java.util.List;
 public class TaskStatusService {
 
 
-    private TaskStatusRepository taskStatusRepository;
-    private TaskStatusMapper taskStatusMapper;
+    private final TaskStatusRepository taskStatusRepository;
+    private final TaskStatusMapper taskStatusMapper;
     private final TaskRepository taskRepository;
 
     public List<TaskStatusDTO> getAll() {
