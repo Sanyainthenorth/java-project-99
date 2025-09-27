@@ -2,6 +2,7 @@ package hexlet.code.service;
 
 import hexlet.code.dto.TaskCreateDTO;
 import hexlet.code.dto.TaskDTO;
+import hexlet.code.dto.TaskFilterParams;
 import hexlet.code.dto.TaskUpdateDTO;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskMapper;
@@ -125,4 +126,22 @@ public class TaskService {
                              .map(taskMapper::toDto)
                              .toList();
     }
+    public List<TaskDTO> getFilteredTasks(TaskFilterParams filterParams) {
+        // Получаем все задачи
+        List<Task> allTasks = taskRepository.findAll();
+
+        // Фильтруем на уровне Java
+        return allTasks.stream()
+                       .filter(task -> !filterParams.hasTitleFilter() ||
+                           task.getName().toLowerCase().contains(filterParams.getTitleCont().toLowerCase()))
+                       .filter(task -> !filterParams.hasAssigneeFilter() ||
+                           (task.getAssignee() != null && task.getAssignee().getId().equals(filterParams.getAssigneeId())))
+                       .filter(task -> !filterParams.hasStatusFilter() ||
+                           task.getTaskStatus().getName().equals(filterParams.getStatus()))
+                       .filter(task -> !filterParams.hasLabelFilter() ||
+                           task.getLabels().stream().anyMatch(label -> label.getId().equals(filterParams.getLabelId())))
+                       .map(taskMapper::toDto)
+                       .toList();
+    }
+
 }

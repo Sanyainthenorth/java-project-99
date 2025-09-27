@@ -2,6 +2,7 @@ package hexlet.code.controller;
 
 import hexlet.code.dto.TaskCreateDTO;
 import hexlet.code.dto.TaskDTO;
+import hexlet.code.dto.TaskFilterParams;
 import hexlet.code.dto.TaskUpdateDTO;
 import hexlet.code.service.TaskService;
 import jakarta.validation.Valid;
@@ -29,8 +30,15 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskDTO>> getAllTasks() {
-        List<TaskDTO> tasks = taskService.getAllTasks();
+    public ResponseEntity<List<TaskDTO>> getAllTasks(
+        @RequestParam(required = false) String titleCont,
+        @RequestParam(required = false) Long assigneeId,
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) Long labelId) {
+
+        TaskFilterParams filterParams = new TaskFilterParams(titleCont, assigneeId, status, labelId);
+        List<TaskDTO> tasks = taskService.getFilteredTasks(filterParams);
+
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-Total-Count", String.valueOf(tasks.size()));
         return new ResponseEntity<>(tasks, headers, HttpStatus.OK);

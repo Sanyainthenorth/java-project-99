@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/assets/**", "/static/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/login").permitAll() // аутентификация
                 .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // регистрация
-
+                
                 // Защищенные endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users").authenticated() // список пользователей
                 .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated() // просмотр конкретного пользователя

@@ -464,5 +464,144 @@ class TaskIntegrationTest {
                             .content(objectMapper.writeValueAsString(invalidDTO2)))
                .andExpect(status().isBadRequest());
     }
+    //тесты для фильтрации
+
+    @Test
+    void shouldFilterTasksByTitle() throws Exception {
+        // Given - создаем несколько задач с разными названиями
+        Task task1 = createTestTask("Create API documentation", "Description", 1, testStatus, testUser);
+        Task task2 = createTestTask("Fix login bug", "Description", 2, testStatus, testUser);
+        Task task3 = createTestTask("Create user interface", "Description", 3, testStatus, testUser);
+
+        // When & Then - фильтрация по подстроке "Create"
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("titleCont", "Create"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(2))
+               .andExpect(jsonPath("$[0].title").value("Create API documentation"))
+               .andExpect(jsonPath("$[1].title").value("Create user interface"));
+    }
+
+    @Test
+    void shouldFilterTasksByAssignee() throws Exception {
+        // Given - создаем второго пользователя и задачи для разных исполнителей
+        User user2 = createTestUser("user2@example.com", "Jane", "Smith");
+
+        // Удаляем задачу, созданную в setUp, чтобы начать с чистого листа
+        taskRepository.deleteAll();
+
+        Task task1 = createTestTask("Task for John", "Description", 1, testStatus, testUser);
+        Task task2 = createTestTask("Task for Jane", "Description", 2, testStatus, user2);
+        Task task3 = createTestTask("Task without assignee", "Description", 3, testStatus, null);
+
+        // When & Then - фильтрация по исполнителю John
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("assigneeId", testUser.getId().toString()))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(1))
+               .andExpect(jsonPath("$[0].title").value("Task for John"))
+               .andExpect(jsonPath("$[0].assignee_id").value(testUser.getId()));
+    }
+
+    @Test
+    void shouldFilterTasksByStatus() throws Exception {
+        // Given - создаем разные статусы и задачи
+        TaskStatus inProgressStatus = createTestStatus("in_progress", "in_progress");
+        TaskStatus doneStatus = createTestStatus("done", "done");
+
+        Task task1 = createTestTask("Todo task", "Description", 1, testStatus, testUser);
+        Task task2 = createTestTask("In progress task", "Description", 2, inProgressStatus, testUser);
+        Task task3 = createTestTask("Done task", "Description", 3, doneStatus, testUser);
+
+        // When & Then - фильтрация по статусу "in_progress"
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("status", "in_progress"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(1))
+               .andExpect(jsonPath("$[0].title").value("In progress task"))
+               .andExpect(jsonPath("$[0].status").value("in_progress"));
+    }
+
+    @Test
+    void shouldFilterTasksByMultipleCriteria() throws Exception {
+        // Given - создаем тестовые данные для комплексной фильтрации
+        TaskStatus reviewStatus = createTestStatus("review", "review");
+        User user2 = createTestUser("developer@example.com", "Dev", "Eloper");
+
+        Task matchingTask = createTestTask("Fix critical bug", "Urgent fix needed", 1, reviewStatus, user2);
+        Task nonMatchingTask1 = createTestTask("Fix minor issue", "Description", 2, testStatus, user2); // другой статус
+        Task nonMatchingTask2 = createTestTask("Critical feature", "Description", 3, reviewStatus, testUser); // другой исполнитель
+
+        // When & Then - комбинированная фильтрация
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("titleCont", "critical")
+                            .param("assigneeId", user2.getId().toString())
+                            .param("status", "review"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(1))
+               .andExpect(jsonPath("$[0].title").value("Fix critical bug"))
+               .andExpect(jsonPath("$[0].assignee_id").value(user2.getId()))
+               .andExpect(jsonPath("$[0].status").value("review"));
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoTasksMatchFilters() throws Exception {
+        // Given - создаем задачу
+        createTestTask("Existing task", "Description", 1, testStatus, testUser);
+
+        // When & Then - фильтр, который не соответствует ни одной задаче
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("titleCont", "nonexistent"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void shouldReturnAllTasksWhenNoFiltersProvided() throws Exception {
+        // Given - создаем несколько задач
+        Task task1 = createTestTask("Task 1", "Description", 1, testStatus, testUser);
+        Task task2 = createTestTask("Task 2", "Description", 2, testStatus, null);
+
+        // When & Then - запрос без фильтров (должен вернуть все задачи)
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(3)) // 2 новые + 1 из setUp
+               .andExpect(header().exists("X-Total-Count"));
+    }
+
+    @Test
+    void shouldFilterTasksCaseInsensitively() throws Exception {
+        // Given
+        Task task1 = createTestTask("CREATE API", "Description", 1, testStatus, testUser);
+        Task task2 = createTestTask("create user", "Description", 2, testStatus, testUser);
+        Task task3 = createTestTask("Delete data", "Description", 3, testStatus, testUser);
+
+        // When & Then - поиск в разных регистрах должен работать
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("titleCont", "create"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(2)); // CREATE API и create user
+    }
+
+    @Test
+    void shouldHandleTasksWithoutAssignee() throws Exception {
+        // Given - задача без исполнителя
+        Task taskWithoutAssignee = createTestTask("Unassigned task", "Description", 1, testStatus, null);
+
+        // When & Then - фильтр по assigneeId=null (если поддерживается) или проверка работы с null
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("titleCont", "Unassigned"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.length()").value(1))
+               .andExpect(jsonPath("$[0].assignee_id").isEmpty());
+    }
 
 }
