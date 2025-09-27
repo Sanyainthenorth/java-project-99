@@ -31,6 +31,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 	implementation("com.nimbusds:nimbus-jose-jwt:9.31")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
 	// Spring Security Crypto для хеширования паролей
 	implementation("org.springframework.security:spring-security-crypto")
 

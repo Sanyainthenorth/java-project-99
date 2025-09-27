@@ -5,9 +5,11 @@ import hexlet.code.dto.TaskDTO;
 import hexlet.code.dto.TaskUpdateDTO;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.TaskMapper;
+import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
@@ -16,7 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -26,6 +30,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskStatusRepository taskStatusRepository;
+    private final LabelRepository labelRepository;
     private final TaskMapper taskMapper;
 
     public List<TaskDTO> getAllTasks() {
@@ -49,12 +54,19 @@ public class TaskService {
         // TaskStatus - обязательное поле
         TaskStatus taskStatus = taskStatusRepository.findByName(taskCreateDto.getStatus())
                                                     .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with name: " + taskCreateDto.getStatus()));
+        task.setTaskStatus(taskStatus);
 
         // Assignee - не обязательное поле
         if (taskCreateDto.getAssignee_id() != null) {
             User assignee = userRepository.findById(taskCreateDto.getAssignee_id())
                                           .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + taskCreateDto.getAssignee_id()));
             task.setAssignee(assignee);
+        }
+
+        if (taskCreateDto.getLabelIds() != null && !taskCreateDto.getLabelIds().isEmpty()) {
+            List<Label> labelsList = labelRepository.findAllById(taskCreateDto.getLabelIds());
+            Set<Label> labels = new HashSet<>(labelsList);
+            task.setLabels(labels);
         }
 
         Task savedTask = taskRepository.save(task);
@@ -80,9 +92,18 @@ public class TaskService {
             task.setTaskStatus(taskStatus);
         }
         if (taskUpdateDto.getAssignee_id() != null) {
-            User assignee = userRepository.findById(taskUpdateDto.getAssignee_id())
-                                          .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + taskUpdateDto.getAssignee_id()));
-            task.setAssignee(assignee);
+            if (taskUpdateDto.getAssignee_id() == 0) {
+                task.setAssignee(null);
+            } else {
+                User assignee = userRepository.findById(taskUpdateDto.getAssignee_id())
+                                              .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + taskUpdateDto.getAssignee_id()));
+                task.setAssignee(assignee);
+            }
+        }
+
+        if (taskUpdateDto.getLabelIds() != null) {
+            Set<Label> labels = new HashSet<>(labelRepository.findAllById(taskUpdateDto.getLabelIds()));
+            task.setLabels(labels);
         }
 
         Task updatedTask = taskRepository.save(task);
@@ -94,5 +115,14 @@ public class TaskService {
             throw new EntityNotFoundException("Task not found with id: " + id);
         }
         taskRepository.deleteById(id);
+    }
+
+    // Дополнительный метод для получения задач по метке
+    public List<TaskDTO> getTasksByLabel(Long labelId) {
+        Label label = labelRepository.findById(labelId)
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + labelId));
+        return taskRepository.findByLabelsContaining(label).stream()
+                             .map(taskMapper::toDto)
+                             .toList();
     }
 }

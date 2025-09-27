@@ -1,7 +1,9 @@
 package hexlet.code.component;
 
+import hexlet.code.model.Label;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
+import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import hexlet.code.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,11 +23,13 @@ public class DataInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TaskStatusRepository taskStatusRepository;
+    private final LabelRepository labelRepository;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
         createAdminUser();
         createDefaultTaskStatuses();
+        createDefaultLabels();
     }
 
     private void createAdminUser() {
@@ -58,6 +63,20 @@ public class DataInitializer implements ApplicationRunner {
             if (!taskStatusRepository.existsBySlug(status.getSlug())) {
                 taskStatusRepository.save(status);
                 System.out.println("Task status created: " + status.getName() + " (" + status.getSlug() + ")");
+            }
+        }
+    }
+
+    private void createDefaultLabels() {
+        String[] defaultLabels = {"feature", "bug"};
+
+        for (String labelName : defaultLabels) {
+            if (!labelRepository.existsByName(labelName)) {
+                Label label = new Label();
+                label.setName(labelName);
+                label.setCreatedAt(LocalDate.now());
+                labelRepository.save(label);
+                System.out.println("Default label created: " + labelName);
             }
         }
     }

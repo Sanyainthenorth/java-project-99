@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Set;
+
 @Getter
 @Setter
 public class TaskUpdateDTO {
@@ -14,4 +16,5 @@ public class TaskUpdateDTO {
     private Integer index;
     private Long assignee_id;
     private String status;
+    private Set<Long> labelIds;
 }
