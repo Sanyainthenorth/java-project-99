@@ -596,7 +596,7 @@ class TaskIntegrationTest {
         TaskCreateDTO createDTO = new TaskCreateDTO();
         createDTO.setTitle("Task with Labels");
         createDTO.setStatus("draft");
-        createDTO.setLabelIds(Set.of(1L, 2L)); // Предполагая что лейблы 1 и 2 существуют
+        createDTO.setTaskLabelIds(Set.of(1L, 2L)); // Предполагая что лейблы 1 и 2 существуют
 
         // When & Then
         mockMvc.perform(post("/api/tasks")
@@ -605,8 +605,8 @@ class TaskIntegrationTest {
                             .content(objectMapper.writeValueAsString(createDTO)))
                .andExpect(status().isCreated())
                .andExpect(jsonPath("$.title").value("Task with Labels"))
-               .andExpect(jsonPath("$.labels").exists())
-               .andExpect(jsonPath("$.labels.length()").value(2));
+               .andExpect(jsonPath("$.taskLabelIds").exists()) // ✅ Изменил на taskLabelIds
+               .andExpect(jsonPath("$.taskLabelIds.length()").value(2)); // ✅ Изменил на taskLabelIds
     }
 
     @Test
@@ -615,7 +615,7 @@ class TaskIntegrationTest {
         TaskCreateDTO createDTO = new TaskCreateDTO();
         createDTO.setTitle("Test Task with Labels");
         createDTO.setStatus("draft");
-        createDTO.setLabelIds(Set.of(1L));
+        createDTO.setTaskLabelIds(Set.of(1L));
 
         // Создаем задачу
         String response = mockMvc.perform(post("/api/tasks")
@@ -634,11 +634,11 @@ class TaskIntegrationTest {
                             .header("Authorization", "Bearer " + authToken))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.id").value(taskId))
-               .andExpect(jsonPath("$.labels").exists())
-               .andExpect(jsonPath("$.labels.length()").value(1))
-               .andExpect(jsonPath("$.labels[0].id").value(1))
-               .andExpect(jsonPath("$.labels[0].name").exists());
+               .andExpect(jsonPath("$.taskLabelIds").exists()) // ✅ Изменил на taskLabelIds
+               .andExpect(jsonPath("$.taskLabelIds.length()").value(1)) // ✅ Изменил на taskLabelIds
+               .andExpect(jsonPath("$.taskLabelIds[0]").value(1)); // ✅ Теперь проверяем ID, а не объект
     }
+
 
 
 }
