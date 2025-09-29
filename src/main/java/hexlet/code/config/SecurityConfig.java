@@ -37,12 +37,15 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/assets/**", "/static/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/login").permitAll() // аутентификация
                 .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // регистрация
-                
+
+                .requestMatchers("/api/tasks/**").authenticated()
+
                 // Защищенные endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users").authenticated() // список пользователей
                 .requestMatchers(HttpMethod.GET, "/api/users/*").authenticated() // просмотр конкретного пользователя
                 .requestMatchers(HttpMethod.PUT, "/api/users/*").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/users/*").authenticated()
+
                 .requestMatchers("/api/task_statuses/**").authenticated()
                 .anyRequest().authenticated()
             )

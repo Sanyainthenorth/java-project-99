@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -16,5 +17,6 @@ public class TaskUpdateDTO {
     private Integer index;
     private Long assignee_id;
     private String status;
-    private Set<Long> labelIds;
+    private Set<Long> labelIds = new HashSet<>();
+    //private Boolean updateLabels = false; // По умолчанию не обновляем лейблы
 }

@@ -56,7 +56,7 @@ public class Task {
     @Column(updatable = false)
     private LocalDate createdAt;
 
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @ManyToMany
     @JoinTable(
         name = "task_labels",
         joinColumns = @JoinColumn(name = "task_id"),

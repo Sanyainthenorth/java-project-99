@@ -13,17 +13,10 @@ import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface LabelMapper {
+    LabelDTO toDto(Label label);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "tasks", ignore = true)
     Label toEntity(LabelDTO labelDTO);
-
-    LabelDTO toDto(Label label);
-
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "tasks", ignore = true)
-    void updateEntityFromDto(LabelDTO labelDTO, @MappingTarget Label label);
 }

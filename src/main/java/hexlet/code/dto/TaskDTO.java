@@ -18,4 +18,7 @@ public class TaskDTO {
     private String content;
     private String status;
     private Set<LabelDTO> labels = new HashSet<>();
+
+    public TaskDTO() {}
+
 }

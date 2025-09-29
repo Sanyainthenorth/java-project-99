@@ -18,10 +18,16 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -47,36 +53,57 @@ public class TaskService {
     }
 
     public TaskDTO createTask(TaskCreateDTO taskCreateDto) {
+        System.out.println("=== CREATE TASK DEBUG ===");
+        System.out.println("Full DTO: " + taskCreateDto);
+        System.out.println("Title: " + taskCreateDto.getTitle());
+        System.out.println("Status: " + taskCreateDto.getStatus());
+        System.out.println("Assignee ID: " + taskCreateDto.getAssignee_id());
+        System.out.println("LabelIds: " + taskCreateDto.getLabelIds());
+        System.out.println("LabelIds is null? " + (taskCreateDto.getLabelIds() == null));
+        System.out.println("LabelIds is empty? " + (taskCreateDto.getLabelIds() != null && taskCreateDto.getLabelIds().isEmpty()));
+
         Task task = new Task();
         task.setName(taskCreateDto.getTitle());
         task.setDescription(taskCreateDto.getContent());
         task.setIndex(taskCreateDto.getIndex());
+        task.setCreatedAt(LocalDate.now());
 
-        // TaskStatus - обязательное поле
-        TaskStatus taskStatus = taskStatusRepository.findByName(taskCreateDto.getStatus())
-                                                    .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with name: " + taskCreateDto.getStatus()));
+        // TaskStatus
+        TaskStatus taskStatus = taskStatusRepository.findBySlug(taskCreateDto.getStatus())
+                                                    .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with slug: " + taskCreateDto.getStatus()));
         task.setTaskStatus(taskStatus);
 
-        // Assignee - не обязательное поле
+        // Assignee
         if (taskCreateDto.getAssignee_id() != null) {
             User assignee = userRepository.findById(taskCreateDto.getAssignee_id())
                                           .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + taskCreateDto.getAssignee_id()));
             task.setAssignee(assignee);
         }
 
+        // Labels - ДЕТАЛЬНАЯ ОТЛАДКА
         if (taskCreateDto.getLabelIds() != null && !taskCreateDto.getLabelIds().isEmpty()) {
-            List<Label> labelsList = labelRepository.findAllById(taskCreateDto.getLabelIds());
-            Set<Label> labels = new HashSet<>(labelsList);
-            task.setLabels(labels);
+            System.out.println("PROCESSING LABELS: " + taskCreateDto.getLabelIds());
+            List<Label> labels = labelRepository.findAllById(taskCreateDto.getLabelIds());
+            System.out.println("Found in DB: " + labels.size() + " labels");
+            for (Label label : labels) {
+                System.out.println("  - Label: " + label.getId() + " - " + label.getName());
+            }
+            task.setLabels(new HashSet<>(labels));
+        } else {
+            System.out.println("NO LABELS PROVIDED OR EMPTY ARRAY");
         }
 
         Task savedTask = taskRepository.save(task);
+        System.out.println("=== TASK CREATED ===");
+        System.out.println("Task ID: " + savedTask.getId());
+        System.out.println("Final labels count: " + savedTask.getLabels().size());
+
         return taskMapper.toDto(savedTask);
     }
 
     public TaskDTO updateTask(Long id, TaskUpdateDTO taskUpdateDto) {
         Task task = taskRepository.findById(id)
-                                  .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
+                                  .orElseThrow(() -> new RuntimeException("Task not found"));
 
         if (taskUpdateDto.getTitle() != null) {
             task.setName(taskUpdateDto.getTitle());
@@ -88,8 +115,8 @@ public class TaskService {
             task.setIndex(taskUpdateDto.getIndex());
         }
         if (taskUpdateDto.getStatus() != null) {
-            TaskStatus taskStatus = taskStatusRepository.findByName(taskUpdateDto.getStatus())
-                                                        .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with name: " + taskUpdateDto.getStatus()));
+            TaskStatus taskStatus = taskStatusRepository.findBySlug(taskUpdateDto.getStatus())
+                                                        .orElseThrow(() -> new RuntimeException("Status not found"));
             task.setTaskStatus(taskStatus);
         }
         if (taskUpdateDto.getAssignee_id() != null) {
@@ -97,15 +124,21 @@ public class TaskService {
                 task.setAssignee(null);
             } else {
                 User assignee = userRepository.findById(taskUpdateDto.getAssignee_id())
-                                              .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + taskUpdateDto.getAssignee_id()));
+                                              .orElseThrow(() -> new RuntimeException("User not found"));
                 task.setAssignee(assignee);
             }
         }
 
+        // ПРОСТАЯ ЛОГИКА ДЛЯ ЛЕЙБЛОВ:
         if (taskUpdateDto.getLabelIds() != null) {
-            Set<Label> labels = new HashSet<>(labelRepository.findAllById(taskUpdateDto.getLabelIds()));
-            task.setLabels(labels);
+            if (taskUpdateDto.getLabelIds().isEmpty()) {
+                task.getLabels().clear();
+            } else {
+                List<Label> labels = labelRepository.findAllById(taskUpdateDto.getLabelIds());
+                task.setLabels(new HashSet<>(labels));
+            }
         }
+        // Если labelIds не передан - сохраняем текущие лейблы
 
         Task updatedTask = taskRepository.save(task);
         return taskMapper.toDto(updatedTask);
@@ -137,9 +170,10 @@ public class TaskService {
                        .filter(task -> !filterParams.hasAssigneeFilter() ||
                            (task.getAssignee() != null && task.getAssignee().getId().equals(filterParams.getAssigneeId())))
                        .filter(task -> !filterParams.hasStatusFilter() ||
-                           task.getTaskStatus().getName().equals(filterParams.getStatus()))
+                           task.getTaskStatus().getSlug().equals(filterParams.getStatus()))
                        .filter(task -> !filterParams.hasLabelFilter() ||
-                           task.getLabels().stream().anyMatch(label -> label.getId().equals(filterParams.getLabelId())))
+                           task.getLabels().stream()
+                               .anyMatch(label -> label.getId().equals(filterParams.getLabelId())))
                        .map(taskMapper::toDto)
                        .toList();
     }

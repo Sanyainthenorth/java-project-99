@@ -13,6 +13,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     boolean existsByTaskStatusId(Long taskStatusId);
     List<Task> findByLabelsContaining(Label label);
 
+
     // Простые методы для фильтрации
     List<Task> findByNameContainingIgnoreCase(String name);
     List<Task> findByAssigneeId(Long assigneeId);

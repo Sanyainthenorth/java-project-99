@@ -2,6 +2,8 @@ package hexlet.code.service;
 
 import hexlet.code.dto.LabelDTO;
 import hexlet.code.dto.TaskDTO;
+import hexlet.code.exception.ResourceConflictException;
+import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.LabelMapper;
 import hexlet.code.repository.LabelRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +18,8 @@ import java.util.Optional;
 @Transactional
 @RequiredArgsConstructor
 public class LabelService {
-
     private final LabelRepository labelRepository;
     private final LabelMapper labelMapper;
-
-    public List<Label> findAll() {
-        return labelRepository.findAll();
-    }
 
     public List<LabelDTO> getAllLabels() {
         return labelRepository.findAll().stream()
@@ -30,50 +27,45 @@ public class LabelService {
                               .toList();
     }
 
-    public Optional<Label> findById(Long id) {
-        return labelRepository.findById(id);
-    }
-
-    public Optional<Label> findByName(String name) {
-        return labelRepository.findByName(name);
-    }
-
-    public Label create(LabelDTO labelDTO) {
-        Label label = labelMapper.toEntity(labelDTO);
-        return labelRepository.save(label);
-    }
-
-    public Optional<Label> update(Long id, LabelDTO labelDTO) {
-        return labelRepository.findById(id)
-                              .map(existingLabel -> {
-                                  // Исправленное название метода
-                                  labelMapper.updateEntityFromDto(labelDTO, existingLabel);
-                                  return labelRepository.save(existingLabel);
-                              });
-    }
-
-    public boolean delete(Long id) {
-        Optional<Label> labelOpt = labelRepository.findById(id);
-        if (labelOpt.isPresent()) {
-            Label label = labelOpt.get();
-
-            // Проверяем, есть ли связанные задачи
-            if (label.getTasks() != null && !label.getTasks().isEmpty()) {
-                return false; // Нельзя удалить - есть связанные задачи
-            }
-
-            labelRepository.delete(label);
-            return true;
-        }
-        return false;
-    }
-
-    public boolean existsByName(String name) {
-        return labelRepository.existsByName(name);
-    }
-
-    // Публичный метод для преобразования Label в LabelDTO
-    public LabelDTO toDto(Label label) {
+    public LabelDTO getLabelById(Long id) {
+        Label label = labelRepository.findById(id)
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
         return labelMapper.toDto(label);
+    }
+
+    public LabelDTO createLabel(LabelDTO labelDTO) {
+        if (labelRepository.existsByName(labelDTO.getName())) {
+            throw new ResourceConflictException("Label with name '" + labelDTO.getName() + "' already exists");
+        }
+
+        Label label = labelMapper.toEntity(labelDTO);
+        Label saved = labelRepository.save(label);
+        return labelMapper.toDto(saved);
+    }
+
+    public LabelDTO updateLabel(Long id, LabelDTO labelDTO) {
+        Label label = labelRepository.findById(id)
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
+
+        // Проверяем уникальность имени
+        Optional<Label> existingWithName = labelRepository.findByName(labelDTO.getName());
+        if (existingWithName.isPresent() && !existingWithName.get().getId().equals(id)) {
+            throw new ResourceConflictException("Label with name '" + labelDTO.getName() + "' already exists");
+        }
+
+        label.setName(labelDTO.getName());
+        Label updated = labelRepository.save(label);
+        return labelMapper.toDto(updated);
+    }
+
+    public void deleteLabel(Long id) {
+        Label label = labelRepository.findById(id)
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
+
+        if (!label.getTasks().isEmpty()) {
+            throw new ResourceConflictException("Cannot delete label with id: " + id + " because it has associated tasks");
+        }
+
+        labelRepository.delete(label);
     }
 }

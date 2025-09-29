@@ -39,9 +39,7 @@ public class LabelController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public LabelDTO getLabel(@PathVariable Long id) {
-        Label label = labelService.findById(id)
-                                  .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
-        return labelService.toDto(label);
+        return labelService.getLabelById(id);
     }
 
     @GetMapping
@@ -56,35 +54,18 @@ public class LabelController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public LabelDTO createLabel(@Valid @RequestBody LabelDTO labelDTO) {
-        if (labelService.existsByName(labelDTO.getName())) {
-            throw new ResourceConflictException("Label with name '" + labelDTO.getName() + "' already exists");
-        }
-
-        Label createdLabel = labelService.create(labelDTO);
-        return labelService.toDto(createdLabel);
+        return labelService.createLabel(labelDTO);
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public LabelDTO updateLabel(@PathVariable Long id, @Valid @RequestBody LabelDTO labelDTO) {
-        // Проверяем уникальность имени (исключая текущую метку)
-        Optional<Label> existingWithName = labelService.findByName(labelDTO.getName());
-        if (existingWithName.isPresent() && !existingWithName.get().getId().equals(id)) {
-            throw new ResourceConflictException("Label with name '" + labelDTO.getName() + "' already exists");
-        }
-
-        Optional<Label> updatedLabel = labelService.update(id, labelDTO);
-        if (updatedLabel.isPresent()) {
-            return labelService.toDto(updatedLabel.get());
-        }
-        throw new ResourceNotFoundException("Label not found with id: " + id);
+        return labelService.updateLabel(id, labelDTO);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteLabel(@PathVariable Long id) {
-        if (!labelService.delete(id)) {
-            throw new ResourceConflictException("Cannot delete label with id: " + id + " because it has associated tasks");
-        }
+        labelService.deleteLabel(id);
     }
 }

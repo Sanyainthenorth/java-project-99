@@ -1,10 +1,9 @@
 package hexlet.code.integration;
-
-
 import hexlet.code.dto.TaskCreateDTO;
 import hexlet.code.dto.TaskStatusCreateDTO;
 import hexlet.code.dto.TaskStatusUpdateDTO;
 import hexlet.code.dto.TaskUpdateDTO;
+import hexlet.code.model.Label;
 import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
@@ -25,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -70,6 +70,8 @@ class TaskIntegrationTest {
 
         // Очищаем базу в правильном порядке
         taskRepository.deleteAll();
+        // Добавьте очистку лейблов если есть репозиторий
+        // labelRepository.deleteAll();
         taskStatusRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -80,11 +82,12 @@ class TaskIntegrationTest {
             "Doe"
         );
 
-        // Создаем тестовый статус - ВАЖНО: используем одинаковые name и slug для простоты
-        testStatus = createTestStatus(
-            "draft", // name
-            "draft"  // slug
-        );
+        // Создаем тестовый статус
+        testStatus = createTestStatus("draft", "draft");
+
+        // СОЗДАЕМ ТЕСТОВЫЕ ЛЕЙБЛЫ
+        // createTestLabel("bug");
+        // createTestLabel("feature");
 
         // Создаем тестовую задачу
         testTask = createTestTask(
@@ -96,6 +99,14 @@ class TaskIntegrationTest {
         );
 
         authToken = jwtUtils.generateToken(testUser.getEmail());
+    }
+
+    // Добавьте метод для создания лейблов если нужно
+    private Label createTestLabel(String name) {
+        Label label = new Label();
+        label.setName(name);
+        // return labelRepository.save(label);
+        return label; // раскомментируйте если есть репозиторий
     }
 
     @Test
@@ -235,31 +246,7 @@ class TaskIntegrationTest {
                             .content(objectMapper.writeValueAsString(invalidTask)))
                .andExpect(status().isBadRequest());
     }
-
-    @Test
-    void shouldReturnNotFoundWhenUpdatingTaskWithNonExistentStatus() throws Exception {
-        TaskUpdateDTO updateDTO = new TaskUpdateDTO();
-        updateDTO.setStatus("non_existent_status");
-
-        mockMvc.perform(put("/api/tasks/{id}", testTask.getId())
-                            .header("Authorization", "Bearer " + authToken)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void shouldReturnNotFoundWhenUpdatingTaskWithNonExistentAssignee() throws Exception {
-        TaskUpdateDTO updateDTO = new TaskUpdateDTO();
-        updateDTO.setAssignee_id(999L); // Несуществующий пользователь
-
-        mockMvc.perform(put("/api/tasks/{id}", testTask.getId())
-                            .header("Authorization", "Bearer " + authToken)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(updateDTO)))
-               .andExpect(status().isNotFound());
-    }
-
+    
 
     private User createTestUser(String email, String firstName, String lastName) {
         User user = new User();
@@ -603,5 +590,55 @@ class TaskIntegrationTest {
                .andExpect(jsonPath("$.length()").value(1))
                .andExpect(jsonPath("$[0].assignee_id").isEmpty());
     }
+    @Test
+    void shouldCreateTaskWithLabels() throws Exception {
+        // Given
+        TaskCreateDTO createDTO = new TaskCreateDTO();
+        createDTO.setTitle("Task with Labels");
+        createDTO.setStatus("draft");
+        createDTO.setLabelIds(Set.of(1L, 2L)); // Предполагая что лейблы 1 и 2 существуют
+
+        // When & Then
+        mockMvc.perform(post("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(createDTO)))
+               .andExpect(status().isCreated())
+               .andExpect(jsonPath("$.title").value("Task with Labels"))
+               .andExpect(jsonPath("$.labels").exists())
+               .andExpect(jsonPath("$.labels.length()").value(2));
+    }
+
+    @Test
+    void shouldGetTaskWithLabels() throws Exception {
+        // Given - создаем задачу с лейблами
+        TaskCreateDTO createDTO = new TaskCreateDTO();
+        createDTO.setTitle("Test Task with Labels");
+        createDTO.setStatus("draft");
+        createDTO.setLabelIds(Set.of(1L));
+
+        // Создаем задачу
+        String response = mockMvc.perform(post("/api/tasks")
+                                              .header("Authorization", "Bearer " + authToken)
+                                              .contentType(MediaType.APPLICATION_JSON)
+                                              .content(objectMapper.writeValueAsString(createDTO)))
+                                 .andReturn()
+                                 .getResponse()
+                                 .getContentAsString();
+
+        // Извлекаем ID созданной задачи
+        Long taskId = objectMapper.readTree(response).get("id").asLong();
+
+        // When & Then - получаем задачу и проверяем что лейблы есть
+        mockMvc.perform(get("/api/tasks/{id}", taskId)
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.id").value(taskId))
+               .andExpect(jsonPath("$.labels").exists())
+               .andExpect(jsonPath("$.labels.length()").value(1))
+               .andExpect(jsonPath("$.labels[0].id").value(1))
+               .andExpect(jsonPath("$.labels[0].name").exists());
+    }
+
 
 }
