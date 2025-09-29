@@ -22,5 +22,5 @@ public class TaskCreateDTO {
 
     @NotBlank
     private String status;
-    private Set<Long> labelIds = new HashSet<>();
+    private Set<Long> taskLabelIds;
 }

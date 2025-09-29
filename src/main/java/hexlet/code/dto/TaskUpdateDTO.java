@@ -17,6 +17,6 @@ public class TaskUpdateDTO {
     private Integer index;
     private Long assignee_id;
     private String status;
-    private Set<Long> labelIds = new HashSet<>();
-    //private Boolean updateLabels = false; // По умолчанию не обновляем лейблы
+    private Set<Long> taskLabelIds;
+
 }

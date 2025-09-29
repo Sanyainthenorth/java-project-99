@@ -17,20 +17,16 @@ public interface TaskMapper {
     @Mapping(source = "description", target = "content")
     @Mapping(source = "taskStatus.slug", target = "status")
     @Mapping(source = "assignee.id", target = "assignee_id")
-    @Mapping(target = "labels", expression = "java(mapLabels(task.getLabels()))") // ДОБАВЬ ЭТУ СТРОКУ!
+    @Mapping(target = "taskLabelIds", expression = "java(mapLabelIds(task.getLabels()))") // ✅ Измените метод
     TaskDTO toDto(Task task);
 
-    // Простой маппинг для лейблов
-    default Set<LabelDTO> mapLabels(Set<Label> labels) {
+    // ✅ Метод который возвращает только IDs
+    default Set<Long> mapLabelIds(Set<Label> labels) {
         if (labels == null) return new HashSet<>();
 
-        Set<LabelDTO> result = new HashSet<>();
+        Set<Long> result = new HashSet<>();
         for (Label label : labels) {
-            LabelDTO dto = new LabelDTO();
-            dto.setId(label.getId());
-            dto.setName(label.getName());
-            dto.setCreatedAt(label.getCreatedAt());
-            result.add(dto);
+            result.add(label.getId());
         }
         return result;
     }

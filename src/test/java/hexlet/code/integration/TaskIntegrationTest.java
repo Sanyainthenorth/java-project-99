@@ -246,7 +246,7 @@ class TaskIntegrationTest {
                             .content(objectMapper.writeValueAsString(invalidTask)))
                .andExpect(status().isBadRequest());
     }
-    
+
 
     private User createTestUser(String email, String firstName, String lastName) {
         User user = new User();
