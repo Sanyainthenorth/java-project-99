@@ -1,6 +1,7 @@
 package hexlet.code.service;
 
 import hexlet.code.dto.LabelDTO;
+import hexlet.code.dto.TaskDTO;
 import hexlet.code.exception.ResourceConflictException;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.mapper.LabelMapper;
@@ -28,8 +29,7 @@ public class LabelService {
 
     public LabelDTO getLabelById(Long id) {
         Label label = labelRepository.findById(id)
-                                     .orElseThrow(
-                                         () -> new ResourceNotFoundException("Label not found with id: " + id));
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
         return labelMapper.toDto(label);
     }
 
@@ -45,8 +45,7 @@ public class LabelService {
 
     public LabelDTO updateLabel(Long id, LabelDTO labelDTO) {
         Label label = labelRepository.findById(id)
-                                     .orElseThrow(
-                                         () -> new ResourceNotFoundException("Label not found with id: " + id));
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
 
         // Проверяем уникальность имени
         Optional<Label> existingWithName = labelRepository.findByName(labelDTO.getName());
@@ -61,12 +60,10 @@ public class LabelService {
 
     public void deleteLabel(Long id) {
         Label label = labelRepository.findById(id)
-                                     .orElseThrow(
-                                         () -> new ResourceNotFoundException("Label not found with id: " + id));
+                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
 
         if (!label.getTasks().isEmpty()) {
-            throw new ResourceConflictException(
-                "Cannot delete label with id: " + id + " because it has associated tasks");
+            throw new ResourceConflictException("Cannot delete label with id: " + id + " because it has associated tasks");
         }
 
         labelRepository.delete(label);

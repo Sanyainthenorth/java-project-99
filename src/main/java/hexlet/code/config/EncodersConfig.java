@@ -17,11 +17,13 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
+import hexlet.code.component.RsaKeyProperties;
 
 @Configuration
 public class EncodersConfig {
 
     @Autowired
+    // Создается ниже
     private RsaKeyProperties rsaKeys;
 
     @Bean

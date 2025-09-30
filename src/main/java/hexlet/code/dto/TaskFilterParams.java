@@ -11,8 +11,7 @@ public class TaskFilterParams {
     private String status;
     private Long labelId;
 
-    public TaskFilterParams() {
-    }
+    public TaskFilterParams() {}
 
     public TaskFilterParams(String titleCont, Long assigneeId, String status, Long labelId) {
         this.titleCont = titleCont;

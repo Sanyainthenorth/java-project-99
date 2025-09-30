@@ -28,8 +28,7 @@ public class TestController {
             // Создаем ошибку
             throw new RuntimeException("Sentry test error - timestamp: " + System.currentTimeMillis());
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Capturing exception to Sentry", e);
 
             // Отправляем в Sentry (возвращает SentryId)

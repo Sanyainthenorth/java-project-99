@@ -9,6 +9,7 @@ import hexlet.code.model.TaskStatus;
 import hexlet.code.repository.TaskRepository;
 import hexlet.code.repository.TaskStatusRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class TaskStatusService {
+
 
     private final TaskStatusRepository taskStatusRepository;
     private final TaskStatusMapper taskStatusMapper;
@@ -30,8 +32,7 @@ public class TaskStatusService {
 
     public TaskStatusDTO findById(Long id) {
         var taskStatus = taskStatusRepository.findById(id)
-                                             .orElseThrow(() -> new ResourceNotFoundException(
-                                                 "TaskStatus not found with id: " + id));
+                                             .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with id: " + id));
         return taskStatusMapper.map(taskStatus);
     }
 
@@ -43,8 +44,7 @@ public class TaskStatusService {
 
     public TaskStatusDTO update(Long id, TaskStatusUpdateDTO data) {
         var taskStatus = taskStatusRepository.findById(id)
-                                             .orElseThrow(() -> new ResourceNotFoundException(
-                                                 "TaskStatus not found with id: " + id));
+                                             .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with id: " + id));
 
         taskStatusMapper.update(data, taskStatus);
         taskStatus = taskStatusRepository.save(taskStatus);
@@ -53,8 +53,7 @@ public class TaskStatusService {
 
     public void delete(Long id) {
         TaskStatus taskStatus = taskStatusRepository.findById(id)
-                                                    .orElseThrow(() -> new ResourceNotFoundException(
-                                                        "TaskStatus not found with id: " + id));
+                                                    .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with id: " + id));
 
         // Проверяем, есть ли задачи с этим статусом
         if (taskRepository.existsByTaskStatusId(id)) {

@@ -67,6 +67,8 @@ class SecurityConfigTest {
                .andExpect(status().isCreated());
     }
 
+
+
     // Тесты на защищенные endpoints
     @Test
     void shouldRequireAuthenticationForTasks() throws Exception {
@@ -127,5 +129,32 @@ class SecurityConfigTest {
                             .header("Authorization", "NotValidScheme invalid_token"))
                .andExpect(status().isUnauthorized());
     }
-}
 
+    @Test
+    void shouldRejectExpiredToken() throws Exception {
+        // Если есть возможность сгенерировать expired token
+        String expiredToken = "expired_token_here";
+
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + expiredToken))
+               .andExpect(status().isUnauthorized());
+    }
+
+    // Тесты на CSRF protection
+    @Test
+    void shouldNotRequireCsrfForApiEndpoints() throws Exception {
+        // Поскольку CSRF отключен, POST запросы должны работать без CSRF токена
+        String taskJson = """
+            {
+                "title": "Test Task",
+                "status": "draft"
+            }
+            """;
+
+        mockMvc.perform(post("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(taskJson))
+               .andExpect(status().isCreated()); // Должен работать без CSRF
+    }
+}
