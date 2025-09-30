@@ -50,6 +50,8 @@ dependencies {
 
 	// PostgreSQL (для продакшена)
 	runtimeOnly("org.postgresql:postgresql")
+
+	implementation ("io.sentry:sentry-spring-boot-starter:6.27.0")
 }
 sonarqube {
 	properties {

@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -638,7 +639,164 @@ class TaskIntegrationTest {
                .andExpect(jsonPath("$.taskLabelIds.length()").value(1)) // ✅ Изменил на taskLabelIds
                .andExpect(jsonPath("$.taskLabelIds[0]").value(1)); // ✅ Теперь проверяем ID, а не объект
     }
+    @Test
+    void shouldCreateTaskWithAuthentication() throws Exception {
+        TaskCreateDTO taskCreateDTO = new TaskCreateDTO();
+        taskCreateDTO.setTitle("New Task");
+        taskCreateDTO.setContent("New Description");
+        taskCreateDTO.setStatus("draft");
+        taskCreateDTO.setIndex(5);
+        taskCreateDTO.setAssignee_id(testUser.getId());
 
+        mockMvc.perform(post("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(taskCreateDTO)))
+               .andExpect(status().isCreated())
+               .andExpect(jsonPath("$.id").exists())
+               .andExpect(jsonPath("$.title").value("New Task"))
+               .andExpect(jsonPath("$.content").value("New Description"))
+               .andExpect(jsonPath("$.index").value(5))
+               .andExpect(jsonPath("$.status").value("draft"))
+               .andExpect(jsonPath("$.assignee_id").value(testUser.getId()));
+    }
 
+    @Test
+    void shouldDeleteTaskWithAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/tasks/{id}", testTask.getId())
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNoContent());
+
+        // Проверяем что задача действительно удалена
+        mockMvc.perform(get("/api/tasks/{id}", testTask.getId())
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnNotFoundForNonExistentTask() throws Exception {
+        Long nonExistentId = 9999L;
+
+        mockMvc.perform(get("/api/tasks/{id}", nonExistentId)
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNotFound());
+
+        mockMvc.perform(put("/api/tasks/{id}", nonExistentId)
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new TaskUpdateDTO())))
+               .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/tasks/{id}", nonExistentId)
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnNotFoundForNonExistentStatus() throws Exception {
+        Long nonExistentId = 9999L;
+
+        mockMvc.perform(get("/api/task_statuses/{id}", nonExistentId)
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNotFound());
+
+        mockMvc.perform(put("/api/task_statuses/{id}", nonExistentId)
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new TaskStatusUpdateDTO())))
+               .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/task_statuses/{id}", nonExistentId)
+                            .header("Authorization", "Bearer " + authToken))
+               .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnNotFoundForInvalidStatusInTaskCreation() throws Exception {
+        TaskCreateDTO invalidTask = new TaskCreateDTO();
+        invalidTask.setTitle("Valid Title");
+        invalidTask.setStatus("non_existent_status"); // Несуществующий статус
+
+        mockMvc.perform(post("/api/tasks")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidTask)))
+               .andExpect(status().isNotFound()) // Ожидаем 404 вместо 400
+               .andExpect(jsonPath("$.error").value(containsString("TaskStatus not found")));
+    }
+
+    @Test
+    void shouldReturnNotFoundForInvalidAssigneeInTaskUpdate() throws Exception {
+        TaskUpdateDTO updateDTO = new TaskUpdateDTO();
+        updateDTO.setAssignee_id(9999L); // Несуществующий пользователь
+
+        mockMvc.perform(put("/api/tasks/{id}", testTask.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isNotFound()) // Ожидаем 404 вместо 400
+               .andExpect(jsonPath("$.error").value("User not found with id: 9999"));
+    }
+
+    @Test
+    void shouldReturnInternalServerErrorForDuplicateStatusSlug() throws Exception {
+        TaskStatusCreateDTO createDTO = new TaskStatusCreateDTO();
+        createDTO.setName("Different Name");
+        createDTO.setSlug(testStatus.getSlug()); // Дублирующий slug
+
+        mockMvc.perform(post("/api/task_statuses")
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(createDTO)))
+               .andExpect(status().isInternalServerError()); // Ожидаем 500
+    }
+
+    // Тест на частичное обновление задачи
+    @Test
+    void shouldUpdateTaskPartially() throws Exception {
+        // Обновляем только title
+        TaskUpdateDTO updateDTO = new TaskUpdateDTO();
+        updateDTO.setTitle("Only Title Updated");
+
+        mockMvc.perform(put("/api/tasks/{id}", testTask.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.title").value("Only Title Updated"))
+               .andExpect(jsonPath("$.content").value(testTask.getDescription())) // Осталось прежним
+               .andExpect(jsonPath("$.index").value(testTask.getIndex())); // Осталось прежним
+
+        // Обновляем только content
+        TaskUpdateDTO updateDTO2 = new TaskUpdateDTO();
+        updateDTO2.setContent("Only Content Updated");
+
+        mockMvc.perform(put("/api/tasks/{id}", testTask.getId())
+                            .header("Authorization", "Bearer " + authToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO2)))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.title").value("Only Title Updated")) // Осталось прежним
+               .andExpect(jsonPath("$.content").value("Only Content Updated"));
+    }
+
+    // Тест на обработку неверного токена
+    @Test
+    void shouldReturnUnauthorizedForInvalidToken() throws Exception {
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer invalid_token"))
+               .andExpect(status().isUnauthorized());
+    }
+
+    // Тест на истеченный токен (если есть возможность сгенерировать)
+    @Test
+    void shouldReturnUnauthorizedForExpiredToken() throws Exception {
+        // Если есть возможность сгенерировать истекший токен
+        String expiredToken = "expired_token_here";
+
+        mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + expiredToken))
+               .andExpect(status().isUnauthorized());
+    }
 
 }

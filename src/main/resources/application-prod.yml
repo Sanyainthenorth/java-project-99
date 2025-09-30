@@ -10,3 +10,5 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+sentry:
+  dsn: https://9aa7f8d08d8ade0c17a6edab60a05670@o4510108694282240.ingest.de.sentry.io/4510108699197520
