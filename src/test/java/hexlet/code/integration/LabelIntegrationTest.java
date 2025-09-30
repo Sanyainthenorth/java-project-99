@@ -15,12 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -58,6 +60,9 @@ class LabelIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private Label existingLabel;
@@ -72,10 +77,12 @@ class LabelIntegrationTest {
         taskStatusRepository.deleteAll();
         userRepository.deleteAll();
 
+        String uniqueEmail = "test" + System.currentTimeMillis() + "@example.com";
+
         // Создаем тестового пользователя
         testUser = new User();
-        testUser.setEmail("test@example.com");
-        testUser.setPassword("password");
+        testUser.setEmail(uniqueEmail);
+        testUser.setPassword(passwordEncoder.encode("password"));
         testUser.setFirstName("Test");
         testUser.setLastName("User");
         testUser.setRole(User.Role.USER);
@@ -127,9 +134,14 @@ class LabelIntegrationTest {
         mockMvc.perform(post("/api/labels")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(labelDTO)))
-               .andExpect(status().isConflict());
+               .andExpect(status().isConflict())
+               .andExpect(jsonPath("$.error").exists()); // ← добавьте проверку тела ошибки
 
-        assertEquals(1, labelRepository.findByName("Existing Label").stream().count());
+        // Проверяем что в базе осталась только одна метка с таким именем
+        List<Label> labelsWithSameName = labelRepository.findAll().stream()
+                                                        .filter(label -> label.getName().equals("Existing Label"))
+                                                        .toList();
+        assertEquals(1, labelsWithSameName.size());
     }
 
     @Test
@@ -334,5 +346,48 @@ class LabelIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(labelDTO)))
                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "test@example.com")
+    void updateLabel_WithEmptyName_ShouldReturnBadRequest() throws Exception {
+        LabelDTO labelDTO = new LabelDTO();
+        labelDTO.setName("   ");
+
+        mockMvc.perform(put("/api/labels/{id}", existingLabel.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(labelDTO)))
+               .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "test@example.com")
+    void getAllLabels_WithNoLabels_ShouldReturnEmptyList() throws Exception {
+        // Given - очищаем все метки
+        labelRepository.deleteAll();
+
+        // When & Then
+        mockMvc.perform(get("/api/labels"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$", hasSize(0)))
+               .andExpect(header().string("X-Total-Count", "0"));
+    }
+
+    @Test
+    @WithMockUser(username = "test@example.com")
+    void getLabel_AfterUpdate_ShouldReturnUpdatedData() throws Exception {
+        // Given - обновляем метку
+        LabelDTO updateDTO = new LabelDTO();
+        updateDTO.setName("Updated Label Name");
+
+        mockMvc.perform(put("/api/labels/{id}", existingLabel.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(updateDTO)))
+               .andExpect(status().isOk());
+
+        // When & Then - проверяем что GET возвращает обновленные данные
+        mockMvc.perform(get("/api/labels/{id}", existingLabel.getId()))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.name").value("Updated Label Name"));
     }
 }

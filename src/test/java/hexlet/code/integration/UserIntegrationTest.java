@@ -50,8 +50,10 @@ class UserIntegrationTest {
     void setUp() {
         userRepository.deleteAll();
 
+        String uniqueEmail = "test" + System.currentTimeMillis() + "@example.com";
+
         testUser = new User();
-        testUser.setEmail("test@example.com");
+        testUser.setEmail(uniqueEmail);
         testUser.setFirstName("John");
         testUser.setLastName("Doe");
         testUser.setPassword(passwordEncoder.encode("password123"));
@@ -79,12 +81,13 @@ class UserIntegrationTest {
 
     @Test
     void shouldAuthenticateAndGetToken() throws Exception {
-        String authRequest = """
+        // Используем реальный email пользователя
+        String authRequest = String.format("""
             {
-                "username": "test@example.com",
+                "username": "%s",
                 "password": "password123"
             }
-            """;
+            """, testUser.getEmail());
 
         mockMvc.perform(post("/api/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -93,15 +96,13 @@ class UserIntegrationTest {
                .andExpect(content().string(not(emptyString())));
     }
 
-    // ТЕСТЫ ДЛЯ ЗАЩИЩЕННЫХ ENDPOINTS (требуют аутентификации)
-
     @Test
     void shouldGetAllUsersWithAuthentication() throws Exception {
         mockMvc.perform(get("/api/users")
                             .header("Authorization", "Bearer " + authToken))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$", hasSize(1)))
-               .andExpect(jsonPath("$[0].email").value("test@example.com"));
+               .andExpect(jsonPath("$[0].email").value(testUser.getEmail())); // ← используем реальный email
     }
 
     @Test
@@ -147,11 +148,11 @@ class UserIntegrationTest {
                .andExpect(status().isUnauthorized());
     }
 
-
     @Test
     void shouldReturnBadRequestForDuplicateEmail() throws Exception {
+        // Создаем пользователя с тем же email что и testUser
         UserCreateDTO userCreateDTO = new UserCreateDTO();
-        userCreateDTO.setEmail("test@example.com"); // Дублирующий email
+        userCreateDTO.setEmail(testUser.getEmail()); // Дублирующий email
         userCreateDTO.setFirstName("Jane");
         userCreateDTO.setLastName("Smith");
         userCreateDTO.setPassword("password123");
@@ -161,63 +162,48 @@ class UserIntegrationTest {
                             .content(objectMapper.writeValueAsString(userCreateDTO)))
                .andExpect(status().isBadRequest());
     }
+
     @Test
     void shouldReturnUnauthorizedForInvalidCredentials() throws Exception {
-        String authRequest = """
+        String authRequest = String.format("""
         {
-            "username": "test@example.com",
+            "username": "%s",
             "password": "wrongpassword"
         }
-        """;
+        """, testUser.getEmail());
 
         mockMvc.perform(post("/api/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(authRequest))
                .andExpect(status().isUnauthorized())
-               .andExpect(content().string("")); // Пустое тело
+               .andExpect(content().string(""));
     }
+
     @Test
     void shouldGetUserByIdWithAuthentication() throws Exception {
-        // Используем тестового пользователя вместо администратора
-        String token = authenticateUser("test@example.com", "password123");
-
+        // Используем существующий authToken вместо нового
         mockMvc.perform(get("/api/users/{id}", testUser.getId())
-                            .header("Authorization", "Bearer " + token))
+                            .header("Authorization", "Bearer " + authToken))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$.email").value("test@example.com"));
+               .andExpect(jsonPath("$.email").value(testUser.getEmail()));
     }
 
     @Test
     void shouldReturnNotFoundForNonExistentUserWithAuthentication() throws Exception {
-        String token = authenticateUser("test@example.com", "password123");
-
         mockMvc.perform(get("/api/users/999")
-                            .header("Authorization", "Bearer " + token))
+                            .header("Authorization", "Bearer " + authToken))
                .andExpect(status().isNotFound());
     }
 
-    // Вспомогательный метод для аутентификации
-    private String authenticateUser(String email, String password) throws Exception {
-        String authRequest = String.format("{\"username\": \"%s\", \"password\": \"%s\"}", email, password);
-
-        MvcResult result = mockMvc.perform(post("/api/login")
-                                               .contentType(MediaType.APPLICATION_JSON)
-                                               .content(authRequest))
-                                  .andExpect(status().isOk())
-                                  .andReturn();
-
-        return result.getResponse().getContentAsString();
-    }
     @Test
     void shouldReturnUnauthorizedForGetUserByIdWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/users/{id}", testUser.getId()))
-               .andExpect(status().isUnauthorized()); // Ожидаем 401, а не 200
+               .andExpect(status().isUnauthorized());
     }
 
     @Test
     void shouldReturnUnauthorizedForNonExistentUserWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/api/users/999"))
-               .andExpect(status().isUnauthorized()); // Ожидаем 401, а не 404
+               .andExpect(status().isUnauthorized());
     }
 }
-
