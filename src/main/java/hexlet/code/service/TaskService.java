@@ -18,16 +18,10 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -60,12 +54,15 @@ public class TaskService {
         task.setCreatedAt(LocalDate.now());
 
         TaskStatus taskStatus = taskStatusRepository.findBySlug(taskCreateDto.getStatus())
-                                                    .orElseThrow(() -> new ResourceNotFoundException("TaskStatus not found with slug: " + taskCreateDto.getStatus()));
+                                                    .orElseThrow(() -> new ResourceNotFoundException(
+                                                        "TaskStatus not found with slug: " +
+                                                            taskCreateDto.getStatus()));
         task.setTaskStatus(taskStatus);
 
         if (taskCreateDto.getAssignee_id() != null) {
             User assignee = userRepository.findById(taskCreateDto.getAssignee_id())
-                                          .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + taskCreateDto.getAssignee_id()));
+                                          .orElseThrow(() -> new EntityNotFoundException(
+                                              "User not found with id: " + taskCreateDto.getAssignee_id()));
             task.setAssignee(assignee);
         }
 
@@ -93,7 +90,9 @@ public class TaskService {
         }
         if (taskUpdateDto.getStatus() != null) {
             TaskStatus taskStatus = taskStatusRepository.findBySlug(taskUpdateDto.getStatus())
-                                                        .orElseThrow(() -> new ResourceNotFoundException("Status not found with slug: " + taskUpdateDto.getStatus()));
+                                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                            "Status not found with slug: " +
+                                                                taskUpdateDto.getStatus()));
             task.setTaskStatus(taskStatus);
         }
         if (taskUpdateDto.getAssignee_id() != null) {
@@ -101,7 +100,8 @@ public class TaskService {
                 task.setAssignee(null);
             } else {
                 User assignee = userRepository.findById(taskUpdateDto.getAssignee_id())
-                                              .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + taskUpdateDto.getAssignee_id()));
+                                              .orElseThrow(() -> new EntityNotFoundException(
+                                                  "User not found with id: " + taskUpdateDto.getAssignee_id()));
                 task.setAssignee(assignee);
             }
         }
@@ -128,7 +128,8 @@ public class TaskService {
 
     public List<TaskDTO> getTasksByLabel(Long labelId) {
         Label label = labelRepository.findById(labelId)
-                                     .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + labelId));
+                                     .orElseThrow(
+                                         () -> new ResourceNotFoundException("Label not found with id: " + labelId));
         return taskRepository.findByLabelsContaining(label).stream()
                              .map(taskMapper::toDto)
                              .toList();
@@ -140,7 +141,8 @@ public class TaskService {
                        .filter(task -> !filterParams.hasTitleFilter() ||
                            task.getName().toLowerCase().contains(filterParams.getTitleCont().toLowerCase()))
                        .filter(task -> !filterParams.hasAssigneeFilter() ||
-                           (task.getAssignee() != null && task.getAssignee().getId().equals(filterParams.getAssigneeId())))
+                           (task.getAssignee() != null &&
+                               task.getAssignee().getId().equals(filterParams.getAssigneeId())))
                        .filter(task -> !filterParams.hasStatusFilter() ||
                            task.getTaskStatus().getSlug().equals(filterParams.getStatus()))
                        .filter(task -> !filterParams.hasLabelFilter() ||

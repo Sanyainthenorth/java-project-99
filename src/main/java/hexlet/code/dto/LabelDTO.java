@@ -19,7 +19,8 @@ public class LabelDTO {
     private LocalDate createdAt;
 
     // Конструкторы
-    public LabelDTO() {}
+    public LabelDTO() {
+    }
 
     public LabelDTO(Long id, String name, LocalDate createdAt) {
         this.id = id;

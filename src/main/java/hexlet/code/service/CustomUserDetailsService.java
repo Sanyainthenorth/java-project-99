@@ -1,15 +1,11 @@
 package hexlet.code.service;
+
 import hexlet.code.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
-
-import hexlet.code.model.User;
-import hexlet.code.repository.UserRepository;
-
 
 @Service
 public class CustomUserDetailsService implements UserDetailsManager {
@@ -19,7 +15,6 @@ public class CustomUserDetailsService implements UserDetailsManager {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // Нужно добавить в репозиторий findByEmail
         var user = userRepository.findByEmail(email)
                                  .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         return user;

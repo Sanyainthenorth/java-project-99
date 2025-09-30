@@ -41,7 +41,6 @@ public class UserController {
         return new ResponseEntity<>(users, headers, HttpStatus.OK);
     }
 
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserDTO createUser(@Valid @RequestBody UserCreateDTO userCreateDTO) {

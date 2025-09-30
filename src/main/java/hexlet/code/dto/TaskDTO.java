@@ -19,6 +19,7 @@ public class TaskDTO {
     private String status;
     private Set<Long> taskLabelIds = new HashSet<>();
 
-    public TaskDTO() {}
+    public TaskDTO() {
+    }
 
 }

@@ -3,7 +3,6 @@ package hexlet.code.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hexlet.code.dto.LabelDTO;
 import hexlet.code.model.Label;
-import hexlet.code.model.Task;
 import hexlet.code.model.TaskStatus;
 import hexlet.code.model.User;
 import hexlet.code.repository.LabelRepository;
@@ -20,11 +19,10 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,10 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.hasSize;
+
 import org.springframework.http.MediaType;
+
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.is;
-
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -135,9 +134,8 @@ class LabelIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(labelDTO)))
                .andExpect(status().isConflict())
-               .andExpect(jsonPath("$.error").exists()); // ← добавьте проверку тела ошибки
+               .andExpect(jsonPath("$.error").exists());
 
-        // Проверяем что в базе осталась только одна метка с таким именем
         List<Label> labelsWithSameName = labelRepository.findAll().stream()
                                                         .filter(label -> label.getName().equals("Existing Label"))
                                                         .toList();

@@ -1,16 +1,9 @@
 package hexlet.code.controller;
 
 import hexlet.code.dto.LabelDTO;
-import hexlet.code.dto.TaskDTO;
-import hexlet.code.exception.ResourceConflictException;
-import hexlet.code.exception.ResourceNotFoundException;
-import hexlet.code.mapper.LabelMapper;
-import hexlet.code.model.Label;
 import hexlet.code.service.LabelService;
-import hexlet.code.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +19,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/labels")

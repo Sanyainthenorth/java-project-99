@@ -1,4 +1,5 @@
 package hexlet.code.integration;
+
 import hexlet.code.dto.TaskCreateDTO;
 import hexlet.code.dto.TaskStatusCreateDTO;
 import hexlet.code.dto.TaskStatusUpdateDTO;
@@ -29,7 +30,6 @@ import java.util.Set;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -86,10 +86,6 @@ class TaskIntegrationTest {
         // Создаем тестовый статус
         testStatus = createTestStatus("draft", "draft");
 
-        // СОЗДАЕМ ТЕСТОВЫЕ ЛЕЙБЛЫ
-        // createTestLabel("bug");
-        // createTestLabel("feature");
-
         // Создаем тестовую задачу
         testTask = createTestTask(
             "Test Task",
@@ -102,12 +98,10 @@ class TaskIntegrationTest {
         authToken = jwtUtils.generateToken(testUser.getEmail());
     }
 
-    // Добавьте метод для создания лейблов если нужно
     private Label createTestLabel(String name) {
         Label label = new Label();
         label.setName(name);
-        // return labelRepository.save(label);
-        return label; // раскомментируйте если есть репозиторий
+        return label;
     }
 
     @Test
@@ -140,7 +134,6 @@ class TaskIntegrationTest {
                .andExpect(jsonPath("$.status").value("draft"))
                .andExpect(jsonPath("$.assignee_id").value(testUser.getId()));
     }
-
 
     @Test
     void shouldReturnUnauthorizedForCreateTaskWithoutToken() throws Exception {
@@ -248,7 +241,6 @@ class TaskIntegrationTest {
                .andExpect(status().isBadRequest());
     }
 
-
     private User createTestUser(String email, String firstName, String lastName) {
         User user = new User();
         user.setEmail(email);
@@ -273,8 +265,9 @@ class TaskIntegrationTest {
         return taskStatusRepository.save(status);
     }
 
-    private Task createTestTask(String name, String description, Integer index,
-                                TaskStatus status, User assignee) {
+    private Task createTestTask(
+        String name, String description, Integer index,
+        TaskStatus status, User assignee) {
         Task task = new Task();
         task.setName(name);
         task.setDescription(description);
@@ -284,6 +277,7 @@ class TaskIntegrationTest {
         task.setCreatedAt(LocalDate.now());
         return taskRepository.save(task);
     }
+
     @Test
     void shouldRequireAuthenticationForGetAllStatuses() throws Exception {
         mockMvc.perform(get("/api/task_statuses"))
@@ -418,7 +412,6 @@ class TaskIntegrationTest {
 
     @Test
     void shouldDeleteStatusWithAuthentication() throws Exception {
-        // Удалите все задачи с этим статусом, если они есть (или не создавайте в setUp)
         taskRepository.deleteAll();
 
         mockMvc.perform(delete("/api/task_statuses/{id}", testStatus.getId())
@@ -521,7 +514,8 @@ class TaskIntegrationTest {
 
         Task matchingTask = createTestTask("Fix critical bug", "Urgent fix needed", 1, reviewStatus, user2);
         Task nonMatchingTask1 = createTestTask("Fix minor issue", "Description", 2, testStatus, user2); // другой статус
-        Task nonMatchingTask2 = createTestTask("Critical feature", "Description", 3, reviewStatus, testUser); // другой исполнитель
+        Task nonMatchingTask2 =
+            createTestTask("Critical feature", "Description", 3, reviewStatus, testUser); // другой исполнитель
 
         // When & Then - комбинированная фильтрация
         mockMvc.perform(get("/api/tasks")
@@ -591,6 +585,7 @@ class TaskIntegrationTest {
                .andExpect(jsonPath("$.length()").value(1))
                .andExpect(jsonPath("$[0].assignee_id").isEmpty());
     }
+
     @Test
     void shouldCreateTaskWithLabels() throws Exception {
         // Given
@@ -639,6 +634,7 @@ class TaskIntegrationTest {
                .andExpect(jsonPath("$.taskLabelIds.length()").value(1)) // ✅ Изменил на taskLabelIds
                .andExpect(jsonPath("$.taskLabelIds[0]").value(1)); // ✅ Теперь проверяем ID, а не объект
     }
+
     @Test
     void shouldCreateTaskWithAuthentication() throws Exception {
         TaskCreateDTO taskCreateDTO = new TaskCreateDTO();
@@ -798,5 +794,4 @@ class TaskIntegrationTest {
                             .header("Authorization", "Bearer " + expiredToken))
                .andExpect(status().isUnauthorized());
     }
-
 }

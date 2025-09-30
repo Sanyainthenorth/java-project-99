@@ -16,6 +16,8 @@ import org.mapstruct.MappingConstants;
 public interface TaskStatusMapper {
 
     TaskStatusDTO map(TaskStatus taskStatus);
+
     TaskStatus map(TaskStatusCreateDTO data);
+
     void update(TaskStatusUpdateDTO data, @MappingTarget TaskStatus taskStatus);
 }

@@ -40,7 +40,6 @@ public class SecurityConfig {
 
                 .requestMatchers("/api/tasks/**").authenticated()
 
-
                 .requestMatchers("/test-sentry").permitAll()
                 // Защищенные endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users").authenticated() // список пользователей
