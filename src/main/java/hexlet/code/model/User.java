@@ -1,5 +1,6 @@
 package hexlet.code.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,6 +36,7 @@ import java.util.List;
 @Getter
 @Setter
 public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -66,6 +68,7 @@ public class User implements UserDetails {
         USER, ADMIN
     }
     @OneToMany(mappedBy = "assignee")
+    @JsonIgnore
     private List<Task> assignedTasks = new ArrayList<>();
 
 
