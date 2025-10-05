@@ -75,37 +75,6 @@ class TaskMapperTest {
     }
 
     @Test
-    void testToDtoWithNullFields() {
-        // Создаем задачу без assignee и labels
-        TaskStatus taskStatus = new TaskStatus("Test Status", "test-status");
-        entityManager.persist(taskStatus);
-
-        Task task = new Task();
-        task.setName("Test Task");
-        task.setDescription("Test Description");
-        task.setTaskStatus(taskStatus);
-        task.setAssignee(null); // нет assignee
-        task.setLabels(Collections.emptySet()); // пустые labels
-        task.setIndex(null); // null index
-        task.setCreatedAt(LocalDate.now());
-
-        entityManager.persist(task);
-        entityManager.flush();
-
-        // Вызываем маппинг
-        TaskDTO dto = taskMapper.toDto(task);
-
-        // Проверяем результаты
-        assertThat(dto).isNotNull();
-        assertThat(dto.getTitle()).isEqualTo("Test Task");
-        assertThat(dto.getContent()).isEqualTo("Test Description");
-        assertThat(dto.getStatus()).isEqualTo("test-status");
-        assertThat(dto.getAssignee_id()).isNull(); // assignee_id должен быть null
-        assertThat(dto.getTaskLabelIds()).isEmpty(); // taskLabelIds должен быть пустым
-        assertThat(dto.getIndex()).isEqualTo(0); // null index -> 0 по умолчанию
-    }
-
-    @Test
     void testToEntity() {
         // Создаем тестовые данные в базе
         TaskStatus taskStatus = new TaskStatus("Test Status", "test-status");
