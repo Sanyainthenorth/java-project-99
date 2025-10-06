@@ -30,6 +30,7 @@ import java.util.Set;
 @Getter
 @Setter
 public class Task {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

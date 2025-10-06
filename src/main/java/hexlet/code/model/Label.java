@@ -1,5 +1,6 @@
 package hexlet.code.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -24,6 +25,7 @@ import jakarta.persistence.Id;
 @Getter
 @Setter
 public class Label {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,9 +38,9 @@ public class Label {
     private LocalDate createdAt;
 
     @ManyToMany(mappedBy = "labels")
+    @JsonIgnore
     private Set<Task> tasks = new HashSet<>();
 
-    // Конструкторы
     public Label() {
         this.createdAt = LocalDate.now();
     }
