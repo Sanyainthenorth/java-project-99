@@ -1,5 +1,6 @@
 package hexlet.code.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import lombok.Getter;
@@ -35,6 +38,7 @@ import java.util.List;
 @Getter
 @Setter
 public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -65,13 +69,28 @@ public class User implements UserDetails {
     public enum Role {
         USER, ADMIN
     }
+
     @OneToMany(mappedBy = "assignee")
+    @JsonIgnore
     private List<Task> assignedTasks = new ArrayList<>();
 
+    @PrePersist
+    @PreUpdate
+    public void prePersist() {
+        if (role == null) {
+            role = Role.USER;
+        }
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        String authority = "ROLE_USER"; // Значение по умолчанию
+
+        if (this.role != null) {
+            authority = "ROLE_" + this.role.name();
+        }
+
+        return List.of(new SimpleGrantedAuthority(authority));
     }
 
     @Override
@@ -99,3 +118,4 @@ public class User implements UserDetails {
         return true;
     }
 }
+
