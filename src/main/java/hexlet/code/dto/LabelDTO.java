@@ -1,5 +1,6 @@
 package hexlet.code.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class LabelDTO {
     @Size(min = 3, max = 1000, message = "Name must be between 3 and 1000 characters")
     private String name;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate createdAt;
 
     // Конструкторы

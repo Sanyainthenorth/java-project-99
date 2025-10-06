@@ -56,23 +56,9 @@ public class UserService {
         User user = userRepository.findById(id)
                                   .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
-        if (updateDTO.getEmail() != null) {
-            if (!updateDTO.getEmail().equals(user.getEmail()) &&
-                userRepository.existsByEmail(updateDTO.getEmail())) {
-                throw new DuplicateEmailException("Email already exists: " + updateDTO.getEmail());
-            }
-            user.setEmail(updateDTO.getEmail());
-        }
+        userMapper.update(updateDTO, user);
 
-        if (updateDTO.getFirstName() != null) {
-            user.setFirstName(updateDTO.getFirstName());
-        }
-
-        if (updateDTO.getLastName() != null) {
-            user.setLastName(updateDTO.getLastName());
-        }
-
-        if (updateDTO.getPassword() != null) {
+        if (updateDTO.getPassword() != null && !updateDTO.getPassword().isEmpty()) {
             user.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
         }
 

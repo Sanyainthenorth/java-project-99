@@ -1,5 +1,6 @@
 package hexlet.code.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,5 +53,6 @@ public class TaskStatus {
         this.slug = slug;
     }
     @OneToMany(mappedBy = "taskStatus")
+    @JsonIgnore
     private List<Task> tasks = new ArrayList<>();
 }

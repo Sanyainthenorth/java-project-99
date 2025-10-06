@@ -14,6 +14,7 @@ import hexlet.code.util.JWTUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -115,12 +116,12 @@ class TaskIntegrationTest {
         mockMvc.perform(get("/api/tasks")
                             .header("Authorization", "Bearer " + authToken))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$.length()").value(1))
-               .andExpect(jsonPath("$[0].title").value("Test Task"))
+               .andExpect(jsonPath("$.length()").value(1)) // Теперь проверяем длину массива
+               .andExpect(jsonPath("$[0].title").value("Test Task")) // $[0] - первый элемент массива
                .andExpect(jsonPath("$[0].content").value("Test Description"))
-               .andExpect(jsonPath("$[0].status").value("draft")) // Используем реальное name статуса
+               .andExpect(jsonPath("$[0].status").value("draft"))
                .andExpect(jsonPath("$[0].assignee_id").value(testUser.getId()))
-               .andExpect(header().exists("X-Total-Count"));
+               .andExpect(header().exists("X-Total-Count")); // Заголовок остаётся
     }
 
     @Test
@@ -311,7 +312,7 @@ class TaskIntegrationTest {
     @Test
     void shouldRequireAuthenticationForUpdateStatus() throws Exception {
         TaskStatusUpdateDTO updateDTO = new TaskStatusUpdateDTO();
-        updateDTO.setName("Updated Status");
+        updateDTO.setName(JsonNullable.of("Updated Status"));
 
         mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
                             .contentType(MediaType.APPLICATION_JSON)
@@ -373,9 +374,7 @@ class TaskIntegrationTest {
 
     @Test
     void shouldUpdateStatusWithAuthentication() throws Exception {
-        TaskStatusUpdateDTO updateDTO = new TaskStatusUpdateDTO();
-        updateDTO.setName("Updated Status Name");
-        updateDTO.setSlug("updated_slug");
+        TaskStatusUpdateDTO updateDTO = TestUtils.createTaskStatusUpdateDTO("Updated Status Name", "updated_slug");
 
         mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
                             .header("Authorization", "Bearer " + authToken)
@@ -390,9 +389,8 @@ class TaskIntegrationTest {
 
     @Test
     void shouldUpdateStatusPartiallyWithAuthentication() throws Exception {
-        // Обновляем только имя
         TaskStatusUpdateDTO updateDTO = new TaskStatusUpdateDTO();
-        updateDTO.setName("Only Name Updated");
+        updateDTO.setName(JsonNullable.of("Only Name Updated"));
 
         mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
                             .header("Authorization", "Bearer " + authToken)
@@ -403,9 +401,9 @@ class TaskIntegrationTest {
                .andExpect(jsonPath("$.name").value("Only Name Updated"))
                .andExpect(jsonPath("$.slug").value(testStatus.getSlug()));
 
-        // Обновляем только slug
+        // Обновляем только slug - ИСПРАВЬ:
         TaskStatusUpdateDTO updateDTO2 = new TaskStatusUpdateDTO();
-        updateDTO2.setSlug("only_slug_updated");
+        updateDTO2.setSlug(JsonNullable.of("only_slug_updated"));
 
         mockMvc.perform(put("/api/task_statuses/{id}", testStatus.getId())
                             .header("Authorization", "Bearer " + authToken)
@@ -583,13 +581,14 @@ class TaskIntegrationTest {
         // Given - задача без исполнителя
         Task taskWithoutAssignee = createTestTask("Unassigned task", "Description", 1, testStatus, null);
 
-        // When & Then - фильтр по assigneeId=null (если поддерживается) или проверка работы с null
+        // When & Then
         mockMvc.perform(get("/api/tasks")
                             .header("Authorization", "Bearer " + authToken)
                             .param("titleCont", "Unassigned"))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.length()").value(1))
-               .andExpect(jsonPath("$[0].assignee_id").isEmpty());
+               .andExpect(jsonPath("$[0].title").value("Unassigned task"))
+               .andExpect(jsonPath("$[0].assignee_id").doesNotExist()); // ПРОСТО ИСПРАВЬ НА doesNotExist()
     }
     @Test
     void shouldCreateTaskWithLabels() throws Exception {
@@ -748,7 +747,7 @@ class TaskIntegrationTest {
                             .header("Authorization", "Bearer " + authToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(createDTO)))
-               .andExpect(status().isInternalServerError()); // Ожидаем 500
+               .andExpect(status().isBadRequest()); // Ожидаем 400 вместо 500
     }
 
     // Тест на частичное обновление задачи

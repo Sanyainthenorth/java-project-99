@@ -1,6 +1,8 @@
 package hexlet.code.service;
 
+import hexlet.code.dto.LabelCreateDTO;
 import hexlet.code.dto.LabelDTO;
+import hexlet.code.dto.LabelUpdateDTO;
 import hexlet.code.dto.TaskDTO;
 import hexlet.code.exception.ResourceConflictException;
 import hexlet.code.exception.ResourceNotFoundException;
@@ -33,27 +35,29 @@ public class LabelService {
         return labelMapper.toDto(label);
     }
 
-    public LabelDTO createLabel(LabelDTO labelDTO) {
-        if (labelRepository.existsByName(labelDTO.getName())) {
-            throw new ResourceConflictException("Label with name '" + labelDTO.getName() + "' already exists");
+    public LabelDTO createLabel(LabelCreateDTO labelCreateDTO) {
+        if (labelRepository.existsByName(labelCreateDTO.getName())) {
+            throw new ResourceConflictException("Label with name '" + labelCreateDTO.getName() + "' already exists");
         }
 
-        Label label = labelMapper.toEntity(labelDTO);
+        Label label = labelMapper.toEntity(labelCreateDTO);
         Label saved = labelRepository.save(label);
         return labelMapper.toDto(saved);
     }
 
-    public LabelDTO updateLabel(Long id, LabelDTO labelDTO) {
+    public LabelDTO updateLabel(Long id, LabelUpdateDTO updateDTO) {
         Label label = labelRepository.findById(id)
                                      .orElseThrow(() -> new ResourceNotFoundException("Label not found with id: " + id));
 
-        // Проверяем уникальность имени
-        Optional<Label> existingWithName = labelRepository.findByName(labelDTO.getName());
-        if (existingWithName.isPresent() && !existingWithName.get().getId().equals(id)) {
-            throw new ResourceConflictException("Label with name '" + labelDTO.getName() + "' already exists");
+        // Проверяем уникальность имени только если имя передано
+        if (updateDTO.getName() != null && !updateDTO.getName().equals(label.getName())) {
+            Optional<Label> existingWithName = labelRepository.findByName(updateDTO.getName());
+            if (existingWithName.isPresent() && !existingWithName.get().getId().equals(id)) {
+                throw new ResourceConflictException("Label with name '" + updateDTO.getName() + "' already exists");
+            }
         }
 
-        label.setName(labelDTO.getName());
+        labelMapper.update(updateDTO, label);
         Label updated = labelRepository.save(label);
         return labelMapper.toDto(updated);
     }

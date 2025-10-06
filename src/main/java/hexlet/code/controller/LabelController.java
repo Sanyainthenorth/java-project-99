@@ -1,6 +1,8 @@
 package hexlet.code.controller;
 
+import hexlet.code.dto.LabelCreateDTO;
 import hexlet.code.dto.LabelDTO;
+import hexlet.code.dto.LabelUpdateDTO;
 import hexlet.code.dto.TaskDTO;
 import hexlet.code.exception.ResourceConflictException;
 import hexlet.code.exception.ResourceNotFoundException;
@@ -53,14 +55,13 @@ public class LabelController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public LabelDTO createLabel(@Valid @RequestBody LabelDTO labelDTO) {
-        return labelService.createLabel(labelDTO);
+    public LabelDTO createLabel(@Valid @RequestBody LabelCreateDTO labelCreateDTO) {
+        return labelService.createLabel(labelCreateDTO);
     }
 
     @PutMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public LabelDTO updateLabel(@PathVariable Long id, @Valid @RequestBody LabelDTO labelDTO) {
-        return labelService.updateLabel(id, labelDTO);
+    public LabelDTO updateLabel(@PathVariable Long id, @Valid @RequestBody LabelUpdateDTO updateDTO) {
+        return labelService.updateLabel(id, updateDTO);
     }
 
     @DeleteMapping("/{id}")
